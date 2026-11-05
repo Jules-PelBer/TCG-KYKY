@@ -222,6 +222,23 @@
   .flipper.pop-rare .face.front .card { box-shadow: 0 0 22px 4px var(--rare); }
   .flipper:not(.flipped):hover .flipper-inner { transform: translateY(-6px) rotateY(8deg); }
   .flipper.flipped { cursor: zoom-in; }
+  .flipper { transition: transform .5s ease, opacity .5s ease; }
+  .reveal-count { color: var(--muted); letter-spacing: 2px; text-transform: uppercase; font-size: .85rem; margin-top: -10px; }
+
+  /* Pile de cartes : les cartes se superposent, on les voit une par une */
+  .reveal-row.stacked {
+    position: relative; display: block;
+    width: min(260px, 70vw); aspect-ratio: 2.5 / 3.5;
+    margin: 10px 0 20px;
+  }
+  .reveal-row.stacked .flipper { position: absolute; inset: 0; width: 100%; --w: 100%; }
+  .reveal-row.stacked .flipper:not(.top) { pointer-events: none; }
+  .reveal-row.stacked .flipper.gone {
+    transform: translateX(130%) rotate(20deg) !important;
+    opacity: 0; pointer-events: none;
+  }
+  .reveal-row.stacked .face .card .name { font-size: 1rem; }
+  .reveal-row.stacked .face .card .desc { font-size: .8rem; }
   .reveal-actions { display: flex; gap: 12px; }
 
   footer { text-align: center; color: var(--muted); padding: 30px; font-size: .85rem; }
@@ -257,9 +274,11 @@
 <!-- Ouverture d'un paquet -->
 <div class="modal" id="reveal-modal">
   <h3>Nouveau paquet !</h3>
-  <div class="reveal-row" id="reveal-row"></div>
+  <p class="reveal-count" id="reveal-count"></p>
+  <div class="reveal-row stacked" id="reveal-row"></div>
   <div class="reveal-actions">
-    <button class="btn primary" id="reveal-all">Tout révéler</button>
+    <button class="btn primary" id="reveal-next">Retourner la carte</button>
+    <button class="btn" id="reveal-all">Tout révéler</button>
     <button class="btn" id="reveal-close">Fermer</button>
   </div>
 </div>
@@ -501,11 +520,18 @@
     }, 600);
   }
 
+  let revealIds = [];
+  let revealIdx = 0; // index de la carte du dessus dans la pile
+
   function showReveal(ids) {
+    revealIds = ids;
+    revealIdx = 0;
     revealRow.innerHTML = "";
+    revealRow.className = "reveal-row stacked";
     ids.forEach(id => {
       const f = document.createElement("div");
       f.className = "flipper";
+      f.dataset.rarity = CARDS[id].rarity;
       f.innerHTML =
         '<div class="flipper-inner">' +
           '<div class="face back"></div>' +
@@ -516,26 +542,92 @@
       bindTilt(card);
       f.querySelector(".front").appendChild(card);
       f.addEventListener("click", () => {
+        // Dans la pile, seule la carte du dessus réagit
+        if (revealRow.classList.contains("stacked") && !f.classList.contains("top")) return;
         // 1er clic : on retourne la carte. Clic suivant : on l'agrandit.
         if (f.classList.contains("flipped")) zoomCard(id);
         else flip(f, CARDS[id].rarity);
+        updateRevealUI();
       });
       revealRow.appendChild(f);
     });
+    layoutStack();
+    updateRevealUI();
     revealModal.classList.add("open");
   }
+
+  // Place les cartes en pile : la 1re au-dessus, les cartes déjà vues s'envolent
+  function layoutStack() {
+    const fl = Array.from(revealRow.children);
+    fl.forEach((f, i) => {
+      f.classList.remove("top", "gone");
+      if (i < revealIdx) {
+        f.classList.add("gone");
+        f.style.zIndex = 0;
+        f.style.transform = "";
+        return;
+      }
+      const depth = i - revealIdx;
+      f.style.zIndex = fl.length - depth;
+      const rot = depth === 0 ? 0 : (depth % 2 ? 2 : -2);
+      f.style.transform = `translate(${depth * 7}px, ${depth * 6}px) rotate(${rot}deg)`;
+      if (depth === 0) f.classList.add("top");
+    });
+  }
+
+  const revealCount = document.getElementById("reveal-count");
+  const revealNext = document.getElementById("reveal-next");
+  const revealAll = document.getElementById("reveal-all");
+
+  function updateRevealUI() {
+    const n = revealIds.length;
+    if (!revealRow.classList.contains("stacked")) {
+      revealCount.textContent = "Ton paquet";
+      revealNext.style.display = "none";
+      revealAll.style.display = "none";
+      return;
+    }
+    revealNext.style.display = "";
+    revealAll.style.display = "";
+    revealCount.textContent = "Carte " + (revealIdx + 1) + " / " + n;
+    const top = revealRow.children[revealIdx];
+    const flipped = top && top.classList.contains("flipped");
+    revealNext.textContent = !flipped ? "Retourner la carte"
+      : (revealIdx < n - 1 ? "Carte suivante →" : "Voir tout le paquet");
+  }
+
+  // Étale les 5 cartes côte à côte, toutes retournées
+  function spreadCards() {
+    revealRow.classList.remove("stacked");
+    Array.from(revealRow.children).forEach((f, i) => {
+      f.classList.remove("top", "gone");
+      f.style.zIndex = "";
+      f.style.transform = "";
+      setTimeout(() => flip(f, f.dataset.rarity), i * 200);
+    });
+    updateRevealUI();
+  }
+
+  revealNext.addEventListener("click", () => {
+    const top = revealRow.children[revealIdx];
+    if (!top) return;
+    if (!top.classList.contains("flipped")) {
+      flip(top, top.dataset.rarity);
+    } else if (revealIdx < revealIds.length - 1) {
+      revealIdx++;
+      layoutStack();
+    } else {
+      spreadCards();
+    }
+    updateRevealUI();
+  });
 
   function flip(f, rarity) {
     if (f.classList.contains("flipped")) return;
     f.classList.add("flipped", "pop-" + rarity);
   }
 
-  document.getElementById("reveal-all").addEventListener("click", () => {
-    revealRow.querySelectorAll(".flipper").forEach((f, i) => {
-      const rarity = f.querySelector(".card").dataset.rarity;
-      setTimeout(() => flip(f, rarity), i * 250);
-    });
-  });
+  revealAll.addEventListener("click", spreadCards);
 
   function closeReveal() {
     revealModal.classList.remove("open");
