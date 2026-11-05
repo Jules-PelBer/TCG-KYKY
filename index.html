@@ -222,6 +222,7 @@
   .flipper.pop-rare .face.front .card { box-shadow: 0 0 22px 4px var(--rare); }
   .flipper:not(.flipped):hover .flipper-inner { transform: translateY(-6px) rotateY(8deg); }
   .flipper.flipped { cursor: zoom-in; }
+  .reveal-row.stacked .flipper.flipped { cursor: pointer; }
   .flipper { transition: transform .5s ease, opacity .5s ease; }
   .reveal-count { color: var(--muted); letter-spacing: 2px; text-transform: uppercase; font-size: .85rem; margin-top: -10px; }
 
@@ -542,11 +543,14 @@
       bindTilt(card);
       f.querySelector(".front").appendChild(card);
       f.addEventListener("click", () => {
+        const stacked = revealRow.classList.contains("stacked");
         // Dans la pile, seule la carte du dessus réagit
-        if (revealRow.classList.contains("stacked") && !f.classList.contains("top")) return;
-        // 1er clic : on retourne la carte. Clic suivant : on l'agrandit.
-        if (f.classList.contains("flipped")) zoomCard(id);
-        else flip(f, CARDS[id].rarity);
+        if (stacked && !f.classList.contains("top")) return;
+        // 1er clic : on retourne la carte. 2e clic : carte suivante.
+        // (Une fois les cartes étalées, un clic sur une carte l'agrandit.)
+        if (!f.classList.contains("flipped")) flip(f, CARDS[id].rarity);
+        else if (stacked) goNext();
+        else zoomCard(id);
         updateRevealUI();
       });
       revealRow.appendChild(f);
@@ -589,11 +593,26 @@
     }
     revealNext.style.display = "";
     revealAll.style.display = "";
-    revealCount.textContent = "Carte " + (revealIdx + 1) + " / " + n;
     const top = revealRow.children[revealIdx];
     const flipped = top && top.classList.contains("flipped");
-    revealNext.textContent = !flipped ? "Retourner la carte"
-      : (revealIdx < n - 1 ? "Carte suivante →" : "Voir tout le paquet");
+    let label = "Carte " + (revealIdx + 1) + " / " + n;
+    if (flipped) {
+      label += revealIdx < n - 1
+        ? " · clique sur la carte pour passer à la suivante"
+        : " · clique sur la carte pour voir tout le paquet";
+    }
+    revealCount.textContent = label;
+    revealNext.textContent = flipped ? "🔍 Agrandir" : "Retourner la carte";
+  }
+
+  // Carte suivante dans la pile (ou récap après la dernière)
+  function goNext() {
+    if (revealIdx < revealIds.length - 1) {
+      revealIdx++;
+      layoutStack();
+    } else {
+      spreadCards();
+    }
   }
 
   // Étale les 5 cartes côte à côte, toutes retournées
@@ -613,11 +632,8 @@
     if (!top) return;
     if (!top.classList.contains("flipped")) {
       flip(top, top.dataset.rarity);
-    } else if (revealIdx < revealIds.length - 1) {
-      revealIdx++;
-      layoutStack();
     } else {
-      spreadCards();
+      zoomCard(revealIds[revealIdx]);
     }
     updateRevealUI();
   });
