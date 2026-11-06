@@ -4,248 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kylian TCG</title>
-<style>
-  :root {
-    --bg: #0d0f1a;
-    --bg2: #171a2e;
-    --text: #f2f3f8;
-    --muted: #9aa0bd;
-    --gold: #f5c542;
-    --common: #8d93a8;
-    --rare: #4da3ff;
-    --epic: #b36bff;
-    --legendary: #f5c542;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: "Trebuchet MS", system-ui, sans-serif;
-    color: var(--text);
-    background:
-      radial-gradient(circle at 20% 10%, #25295a 0%, transparent 40%),
-      radial-gradient(circle at 80% 90%, #3a1f5c 0%, transparent 40%),
-      var(--bg);
-    min-height: 100vh;
-  }
-  header { text-align: center; padding: 48px 20px 10px; }
-  header h1 {
-    font-size: clamp(2.2rem, 6vw, 4rem);
-    letter-spacing: 4px;
-    text-transform: uppercase;
-    background: linear-gradient(90deg, #f5c542, #ff7a59, #b36bff);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-  header p { color: var(--muted); margin-top: 10px; }
-
-  .stats {
-    display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin: 22px 0 6px;
-  }
-  .stat {
-    background: var(--bg2); border: 1px solid #2c3052; border-radius: 12px;
-    padding: 10px 20px; font-size: .95rem;
-  }
-  .stat b { color: var(--gold); font-size: 1.15rem; }
-
-  h2.section {
-    text-align: center; margin: 40px 20px 18px; font-size: 1.4rem;
-    letter-spacing: 3px; text-transform: uppercase; color: var(--text);
-  }
-  .hint { text-align: center; color: var(--muted); margin-bottom: 20px; font-size: .9rem; }
-
-  /* ---- Paquets ---- */
-  .packs {
-    max-width: 1100px; margin: 0 auto; padding: 10px 20px;
-    display: flex; flex-wrap: wrap; gap: 26px; justify-content: center;
-  }
-  .pack {
-    width: 130px; aspect-ratio: 1 / 1.7; border-radius: 10px; position: relative;
-    cursor: pointer; overflow: hidden;
-    background: linear-gradient(160deg, #ff7a59 0%, #b36bff 55%, #4da3ff 100%);
-    box-shadow: 0 10px 25px rgba(0,0,0,.5);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 8px; text-align: center; transition: transform .2s, box-shadow .2s, filter .3s;
-    border: 2px solid rgba(255,255,255,.35);
-  }
-  .pack::before, .pack::after {
-    content: ""; position: absolute; left: 0; right: 0; height: 12px;
-    background: repeating-linear-gradient(90deg, rgba(255,255,255,.55) 0 6px, transparent 6px 12px);
-  }
-  .pack::before { top: 0; }
-  .pack::after { bottom: 0; }
-  .pack .shine {
-    position: absolute; inset: 0; pointer-events: none;
-    background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.5) 50%, transparent 70%);
-    background-size: 250% 100%; background-position: 150% 0; transition: background-position .8s;
-  }
-  .pack:hover .shine { background-position: -50% 0; }
-  .pack:hover { transform: translateY(-8px) rotate(-3deg); box-shadow: 0 18px 35px rgba(0,0,0,.6), 0 0 25px #b36bff; }
-  .pack .logo { font-weight: 900; letter-spacing: 2px; font-size: 1.05rem; text-shadow: 0 2px 6px rgba(0,0,0,.6); }
-  .pack .count { font-size: .75rem; background: rgba(0,0,0,.4); padding: 3px 10px; border-radius: 999px; }
-  .pack .emblem { font-size: 2.4rem; text-shadow: 0 2px 8px rgba(0,0,0,.6); }
-  .pack.opened { filter: grayscale(1) brightness(.4); cursor: default; pointer-events: none; }
-  .pack.opened .emblem::after { content: ""; }
-  .pack.tearing { animation: tear .6s forwards; pointer-events: none; }
-  @keyframes tear {
-    0% { transform: scale(1) rotate(0); }
-    30% { transform: scale(1.12) rotate(-6deg); }
-    60% { transform: scale(1.18) rotate(5deg); filter: brightness(1.8); }
-    100% { transform: scale(1.5) rotate(0); opacity: 0; filter: brightness(3); }
-  }
-  .complete { text-align: center; color: var(--gold); font-weight: bold; margin: 14px 0; min-height: 1.2em; }
-
-  .actions { text-align: center; margin-top: 10px; }
-  .btn {
-    background: var(--bg2); color: var(--text); border: 1px solid #2c3052;
-    padding: 9px 20px; border-radius: 999px; cursor: pointer; font-size: .9rem; transition: .2s;
-  }
-  .btn:hover { border-color: var(--gold); }
-  .btn.primary { background: var(--gold); color: #1a1a1a; border-color: var(--gold); font-weight: bold; }
-
-  /* ---- Filtres ---- */
-  .filters { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; padding: 6px 20px 26px; }
-  .filters button {
-    background: var(--bg2); color: var(--text); border: 1px solid #2c3052;
-    padding: 8px 18px; border-radius: 999px; cursor: pointer; font-size: .9rem; transition: .2s;
-  }
-  .filters button:hover { border-color: var(--gold); }
-  .filters button.active { background: var(--gold); color: #1a1a1a; border-color: var(--gold); font-weight: bold; }
-
-  /* ---- Collection ---- */
-  .grid {
-    max-width: 1200px; margin: 0 auto; padding: 0 20px 80px;
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 32px;
-    justify-items: center;
-  }
-
-  /* ---- Carte ---- */
-  .card {
-    --c: var(--common);
-    width: 250px; aspect-ratio: 2.5 / 3.5;
-    border-radius: 16px; padding: 10px;
-    background: linear-gradient(145deg, var(--c), #1b1e33 60%);
-    box-shadow: 0 10px 30px rgba(0,0,0,.5);
-    position: relative; cursor: pointer;
-    transform-style: preserve-3d;
-    transition: transform .15s ease-out, box-shadow .2s;
-    overflow: hidden;
-  }
-  .card[data-rarity="rare"] { --c: var(--rare); }
-  .card[data-rarity="epic"] { --c: var(--epic); }
-  .card[data-rarity="legendary"] { --c: var(--legendary); }
-  .card:hover { box-shadow: 0 18px 45px rgba(0,0,0,.7), 0 0 25px var(--c); }
-
-  .card::after {
-    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-    background: linear-gradient(115deg, transparent 20%, rgba(255,255,255,.35) 40%, rgba(255,255,255,.05) 50%, transparent 70%);
-    background-size: 250% 250%;
-    background-position: var(--mx, 50%) var(--my, 50%);
-    mix-blend-mode: overlay; opacity: 0; transition: opacity .2s;
-  }
-  .card:hover::after { opacity: 1; }
-
-  .inner {
-    height: 100%; border-radius: 10px; background: #121427;
-    display: flex; flex-direction: column; padding: 8px; gap: 6px;
-  }
-  .top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
-  .name { font-size: 1rem; min-height: 1.2em; flex: 1; }
-  .num { font-size: .75rem; color: var(--muted); }
-
-  .art {
-    position: relative; flex: 0 0 52%; border-radius: 8px; overflow: hidden;
-    border: 2px solid var(--c);
-    background: repeating-linear-gradient(45deg, #1c1f3a, #1c1f3a 10px, #20244a 10px, #20244a 20px);
-    display: grid; place-items: center;
-  }
-  .art::before { content: "📷 Photo"; color: var(--muted); font-size: .85rem; }
-  .art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-
-  .badges { display: flex; justify-content: space-between; align-items: center; font-size: .7rem; text-transform: uppercase; letter-spacing: 1px; }
-  .rarity { color: var(--c); font-weight: bold; }
-  .type { min-height: 1em; color: var(--muted); }
-
-  .desc {
-    flex: 1; font-size: .8rem; line-height: 1.35; color: #d7daea;
-    background: #0c0e1c; border-radius: 6px; padding: 8px; min-height: 60px;
-    overflow: auto;
-  }
-
-  /* ---- Dos de carte (non obtenue) ---- */
-  .cardback {
-    width: 250px; aspect-ratio: 2.5 / 3.5; border-radius: 16px; padding: 10px;
-    background: linear-gradient(145deg, #3a3f6b, #161830);
-    box-shadow: 0 10px 30px rgba(0,0,0,.5); position: relative;
-  }
-  .cardback .pattern {
-    height: 100%; border-radius: 10px; border: 2px solid rgba(255,255,255,.18);
-    background:
-      repeating-linear-gradient(45deg, rgba(255,255,255,.04) 0 12px, transparent 12px 24px),
-      radial-gradient(circle at 50% 50%, #2a2e5a, #11132a);
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
-  }
-  .cardback .k { font-size: 3.4rem; font-weight: 900; color: var(--gold); text-shadow: 0 0 20px rgba(245,197,66,.5); }
-  .cardback .t { font-size: .7rem; letter-spacing: 3px; color: var(--muted); text-transform: uppercase; }
-  .cardback.locked { filter: brightness(.55) saturate(.6); }
-  .cardback.locked .k { color: #5b6090; text-shadow: none; }
-
-  /* ---- Modales ---- */
-  .modal {
-    position: fixed; inset: 0; background: rgba(5,6,12,.92); display: none;
-    flex-direction: column; align-items: center; justify-content: center; z-index: 10;
-    padding: 20px; gap: 24px; overflow-y: auto;
-  }
-  .modal.open { display: flex; }
-  .modal .close {
-    position: absolute; top: 14px; right: 22px; font-size: 2rem; color: #fff;
-    background: none; border: none; cursor: pointer; z-index: 2;
-  }
-  .modal h3 { letter-spacing: 3px; text-transform: uppercase; }
-  #modal-slot .card { width: min(380px, 90vw); cursor: default; }
-
-  .reveal-row {
-    display: flex; flex-wrap: wrap; gap: 18px; justify-content: center; max-width: 1200px;
-  }
-  .flipper { --w: 200px; width: var(--w); aspect-ratio: 2.5 / 3.5; perspective: 900px; cursor: pointer; }
-  .flipper-inner {
-    position: relative; width: 100%; height: 100%;
-    transition: transform .7s cubic-bezier(.3,.8,.3,1); transform-style: preserve-3d;
-  }
-  .flipper.flipped .flipper-inner { transform: rotateY(180deg); }
-  .face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-  .face.front { transform: rotateY(180deg); }
-  .face .card, .face .cardback { width: 100%; height: 100%; }
-  .face .card .name { font-size: .85rem; }
-  .face .card .desc { font-size: .68rem; min-height: 40px; padding: 5px; }
-  .flipper.pop-legendary .face.front .card { box-shadow: 0 0 40px 8px var(--legendary); }
-  .flipper.pop-epic .face.front .card { box-shadow: 0 0 30px 6px var(--epic); }
-  .flipper.pop-rare .face.front .card { box-shadow: 0 0 22px 4px var(--rare); }
-  .flipper:not(.flipped):hover .flipper-inner { transform: translateY(-6px) rotateY(8deg); }
-  .flipper.flipped { cursor: zoom-in; }
-  .reveal-row.stacked .flipper.flipped { cursor: pointer; }
-  .flipper { transition: transform .5s ease, opacity .5s ease; }
-  .reveal-count { color: var(--muted); letter-spacing: 2px; text-transform: uppercase; font-size: .85rem; margin-top: -10px; }
-
-  /* Pile de cartes : les cartes se superposent, on les voit une par une */
-  .reveal-row.stacked {
-    position: relative; display: block;
-    width: min(260px, 70vw); aspect-ratio: 2.5 / 3.5;
-    margin: 10px 0 20px;
-  }
-  .reveal-row.stacked .flipper { position: absolute; inset: 0; width: 100%; --w: 100%; }
-  .reveal-row.stacked .flipper:not(.top) { pointer-events: none; }
-  .reveal-row.stacked .flipper.gone {
-    transform: translateX(130%) rotate(20deg) !important;
-    opacity: 0; pointer-events: none;
-  }
-  .reveal-row.stacked .face .card .name { font-size: 1rem; }
-  .reveal-row.stacked .face .card .desc { font-size: .8rem; }
-  .reveal-actions { display: flex; gap: 12px; }
-
-  footer { text-align: center; color: var(--muted); padding: 30px; font-size: .85rem; }
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div id="site-content">
 
 <header>
   <h1>Kylian TCG</h1>
@@ -255,13 +17,25 @@
     <div class="stat">Paquets restants : <b id="stat-packs">8</b> / 8</div>
   </div>
 </header>
+<div class="site-tabs" role="tablist" aria-label="Navigation du jeu">
+  <button class="site-tab" type="button" id="tab-packs" role="tab" aria-selected="true" aria-controls="panel-packs" tabindex="0">
+    <span>Ouvrir des paquets</span><span class="tab-count" id="tab-packs-count" aria-hidden="true">8</span>
+  </button>
+  <button class="site-tab" type="button" id="tab-collection" role="tab" aria-selected="false" aria-controls="panel-collection" tabindex="-1">
+    <span>Ma collection</span><span class="tab-count" id="tab-collection-count" aria-hidden="true">0 / 40</span>
+  </button>
+</div>
 
+<main class="tab-panels">
+<section id="panel-packs" class="tab-panel" role="tabpanel" aria-labelledby="tab-packs" tabindex="0">
 <h2 class="section">Paquets</h2>
 <p class="hint">Clique sur un paquet pour l'ouvrir</p>
 <div class="packs" id="packs"></div>
 <p class="complete" id="complete"></p>
 <div class="actions"><button class="btn" id="reset">↺ Réinitialiser la collection</button></div>
 
+</section>
+<section id="panel-collection" class="tab-panel" role="tabpanel" aria-labelledby="tab-collection" tabindex="0" hidden>
 <h2 class="section">Ma collection</h2>
 <div class="filters">
   <button class="active" data-filter="all">Toutes</button>
@@ -270,28 +44,23 @@
   <button data-filter="epic">Épique</button>
   <button data-filter="legendary">Légendaire</button>
 </div>
-<main class="grid" id="grid"></main>
-
-<!-- Ouverture d'un paquet -->
-<div class="modal" id="reveal-modal">
-  <h3>Nouveau paquet !</h3>
-  <p class="reveal-count" id="reveal-count"></p>
-  <div class="reveal-row stacked" id="reveal-row"></div>
-  <div class="reveal-actions">
-    <button class="btn primary" id="reveal-next">Retourner la carte</button>
-    <button class="btn" id="reveal-all">Tout révéler</button>
-    <button class="btn" id="reveal-close">Fermer</button>
-  </div>
-</div>
-
-<!-- Carte agrandie -->
-<div class="modal" id="zoom-modal">
-  <button class="close" aria-label="Fermer">×</button>
-  <div id="modal-slot"></div>
-</div>
+<div class="grid" id="grid"></div>
+</section>
+</main>
 
 <footer>Kylian TCG · Tous droits réservés</footer>
-
+</div>
+<div class="modal" id="reveal-modal" role="dialog" aria-modal="true" aria-labelledby="reveal-title">
+  <div class="reveal-topbar"><span class="edition-label">Kylian TCG · La collection originale</span><button class="btn sound-toggle" id="sound-toggle" aria-pressed="false">Son désactivé</button></div>
+  <div class="reveal-heading"><h3 id="reveal-title">Un Kylian peut en cacher un autre.</h3><p class="reveal-count" id="reveal-count" aria-live="polite"></p></div>
+  <div class="reveal-stage"><div class="particles" id="particles" aria-hidden="true"></div><div class="reveal-row stacked" id="reveal-row"></div><p class="rarity-announcement" id="rarity-announcement" aria-live="polite"></p><div class="reveal-dots" id="reveal-dots" aria-hidden="true"></div></div>
+  <div class="reveal-actions"><button class="btn primary" id="reveal-next">Révéler la carte</button><button class="btn" id="reveal-zoom" hidden>Agrandir</button><button class="btn" id="reveal-all">Tout révéler</button></div>
+  <p class="reveal-help" id="reveal-help"></p>
+  <button class="btn" id="reveal-close">Garder ce paquet et fermer</button>
+</div>
+<div class="modal" id="zoom-modal" role="dialog" aria-modal="true" aria-labelledby="zoom-title">
+  <button class="close" id="zoom-close" aria-label="Fermer la carte">×</button><h3 id="zoom-title" hidden>Carte agrandie</h3><div id="modal-slot"></div><p class="zoom-caption">Échap ou × pour revenir</p>
+</div>
 <script>
   /* =====================================================================
      TES 40 CARTES
@@ -350,343 +119,170 @@
     { name: "En manif", img: "img/rfJW7.jpg", desc: "Quand kyky vole le tshirt de Mr Laur et fait manif avec, Marine et Jordan ne sont pas contents :(", type: "", rarity: "legendary" }
   ];
 
-  const CARDS_PER_PACK = 5;
-  const PACK_COUNT = 8; // 8 paquets x 5 cartes = 40 cartes
-  const STORAGE_KEY = "kylian-tcg-v1";
-  const RARITY_LABEL = { common: "Commune", rare: "Rare", epic: "Épique", legendary: "Légendaire" };
-
-  /* ---------- État (sauvegardé dans le navigateur) ---------- */
-  function shuffle(arr) {
-    const a = arr.slice();
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  }
-  function newState() {
-    // Les 40 cartes sont mélangées une fois, puis découpées en 8 paquets de 5 :
-    // en ouvrant les 8 paquets, tu obtiens chaque carte exactement une fois.
-    return { order: shuffle(CARDS.map((_, i) => i)), opened: 0 };
-  }
-  function loadState() {
-    try {
-      const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (s && Array.isArray(s.order) && s.order.length === CARDS.length &&
-          Number.isInteger(s.opened) && s.opened >= 0 && s.opened <= PACK_COUNT) return s;
-    } catch (e) {}
-    return newState();
-  }
-  function saveState() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
-  }
-  let state = loadState();
-  saveState();
-
-  /* ---------- Construction des cartes ---------- */
-  function pad(n) { return String(n).padStart(3, "0"); }
-
-  function makeCard(id) {
-    const d = CARDS[id];
-    const el = document.createElement("article");
-    el.className = "card";
-    el.dataset.rarity = d.rarity;
-    el.innerHTML =
-      '<div class="inner">' +
-        '<div class="top"><h3 class="name"></h3><span class="num"></span></div>' +
-        '<div class="art"></div>' +
-        '<div class="badges"><span class="rarity"></span><span class="type"></span></div>' +
-        '<p class="desc"></p>' +
-      '</div>';
-    el.querySelector(".name").textContent = d.name;
-    el.querySelector(".num").textContent = "#" + pad(id + 1);
-    el.querySelector(".rarity").textContent = RARITY_LABEL[d.rarity];
-    el.querySelector(".type").textContent = d.type;
-    el.querySelector(".desc").textContent = d.desc;
-    if (d.img) {
-      const img = document.createElement("img");
-      img.src = d.img;
-      img.alt = d.name || "Kylian";
-      el.querySelector(".art").appendChild(img);
-    }
-    return el;
-  }
-
-  function makeBack(id, locked) {
-    const el = document.createElement("div");
-    el.className = "cardback" + (locked ? " locked" : "");
-    el.innerHTML = '<div class="pattern"><div class="k">K</div><div class="t"></div></div>';
-    el.querySelector(".t").textContent = locked ? "#" + pad(id + 1) : "Kylian TCG";
-    return el;
-  }
-
-  function bindTilt(card) {
-    card.addEventListener("mousemove", e => {
-      const r = card.getBoundingClientRect();
-      const x = (e.clientX - r.left) / r.width;
-      const y = (e.clientY - r.top) / r.height;
-      card.style.transform = `perspective(700px) rotateY(${(x - .5) * 18}deg) rotateX(${(.5 - y) * 18}deg) scale(1.04)`;
-      card.style.setProperty("--mx", (x * 100) + "%");
-      card.style.setProperty("--my", (y * 100) + "%");
-    });
-    card.addEventListener("mouseleave", () => { card.style.transform = ""; });
-  }
-
-  /* ---------- Affichage : stats, paquets, collection ---------- */
-  const packsEl = document.getElementById("packs");
-  const gridEl = document.getElementById("grid");
-  let currentFilter = "all";
-
-  function ownedIds() {
-    return new Set(state.order.slice(0, state.opened * CARDS_PER_PACK));
-  }
-
-  function renderStats() {
-    document.getElementById("stat-cards").textContent = state.opened * CARDS_PER_PACK;
-    document.getElementById("stat-total").textContent = CARDS.length;
-    document.getElementById("stat-packs").textContent = PACK_COUNT - state.opened;
-    document.getElementById("complete").textContent =
-      state.opened >= PACK_COUNT ? "🏆 Collection complète !" : "";
-  }
-
-  function renderPacks() {
-    packsEl.innerHTML = "";
-    for (let i = 0; i < PACK_COUNT; i++) {
-      const p = document.createElement("div");
-      const isOpened = i < state.opened;
-      p.className = "pack" + (isOpened ? " opened" : "");
-      p.innerHTML =
-        '<div class="shine"></div>' +
-        '<div class="logo">KYLIAN<br>TCG</div>' +
-        '<div class="emblem">' + (isOpened ? "✔" : "★") + '</div>' +
-        '<div class="count">' + (isOpened ? "Ouvert" : CARDS_PER_PACK + " cartes") + '</div>';
-      if (!isOpened) p.addEventListener("click", () => openPack(p));
-      packsEl.appendChild(p);
-    }
-  }
-
-  function renderCollection() {
-    const owned = ownedIds();
-    gridEl.innerHTML = "";
-    CARDS.forEach((d, id) => {
-      const has = owned.has(id);
-      let el;
-      if (has) {
-        el = makeCard(id);
-        bindTilt(el);
-        el.addEventListener("click", () => zoomCard(id));
-      } else {
-        el = makeBack(id, true);
-      }
-      el.dataset.owned = has ? "1" : "0";
-      el.dataset.rarityKey = d.rarity;
-      gridEl.appendChild(el);
-    });
-    applyFilter();
-  }
-
-  function applyFilter() {
-    gridEl.querySelectorAll("[data-owned]").forEach(el => {
-      const show = currentFilter === "all" ||
-        (el.dataset.owned === "1" && el.dataset.rarityKey === currentFilter);
-      el.style.display = show ? "" : "none";
-    });
-  }
-
-  document.querySelectorAll(".filters button").forEach(btn => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".filters button").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      currentFilter = btn.dataset.filter;
-      applyFilter();
-    });
+const CARDS_PER_PACK = 5, PACK_COUNT = 8, STORAGE_KEY = 'kylian-tcg-v1';
+const RARITY_LABEL = {common:'Commune',rare:'Rare',epic:'Épique',legendary:'Légendaire'};
+const COLORS = {common:'#a8a0b8',rare:'#4da3ff',epic:'#b36bff',legendary:'#f5c542'};
+const RARITY_EFFECTS = {
+  common: {symbol:'◇', stars:'◆', charge:120, turn:680, tease:'Une nouvelle facette…'},
+  rare: {symbol:'✧', stars:'✦ ✦', charge:360, turn:820, tease:'Un éclat se dessine…'},
+  epic: {symbol:'✦', stars:'✦ ✦ ✦', charge:650, turn:980, tease:'Quelque chose se réveille…'},
+  legendary: {symbol:'♛', stars:'✦ ✦ ✦ ✦', charge:1000, turn:1180, tease:'Un instant. Ça, c’est Kylian.'}
+};
+const $ = id => document.getElementById(id);
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Animate visible cards only; unseen collection cards do not use animation resources.
+const cardVisibility = typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver(entries=>{
+  entries.forEach(entry=>entry.target.classList.toggle('in-view',entry.isIntersecting));
+}, {rootMargin:'40px'});
+function newState() {
+  const order = CARDS.map((_,i)=>i);
+  for(let i=order.length-1;i>0;i--) {const j=Math.floor(Math.random()*(i+1)); [order[i],order[j]]=[order[j],order[i]];}
+  return {order,opened:0};
+}
+function loadState() {
+  try { const s=JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if(s && Array.isArray(s.order) && s.order.length===CARDS.length && new Set(s.order).size===CARDS.length && s.order.every(i=>Number.isInteger(i)&&i>=0&&i<CARDS.length) && Number.isInteger(s.opened)&&s.opened>=0&&s.opened<=PACK_COUNT) return s;
+  } catch {}
+  return newState();
+}
+let state=loadState(), currentFilter='all', opening=false, openingTimer=null, revealIds=[], revealIdx=0, busy=false, flipTimer=null, spread=false;
+let returnFocus=null, zoomReturnFocus=null, audioCtx=null, soundEnabled=false;
+function saveState(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{}}
+/* Navigation: changing tabs keeps the collection, filters and saved game intact. */
+const tabNames=['packs','collection'];
+function activateTab(name,focus=false){
+  if(!tabNames.includes(name))return;
+  tabNames.forEach(key=>{
+    const selected=key===name,tab=$('tab-'+key);
+    tab.setAttribute('aria-selected',String(selected));
+    tab.tabIndex=selected?0:-1;
+    $('panel-'+key).hidden=!selected;
   });
-
-  /* ---------- Ouverture d'un paquet ---------- */
-  const revealModal = document.getElementById("reveal-modal");
-  const revealRow = document.getElementById("reveal-row");
-
-  function openPack(packEl) {
-    if (state.opened >= PACK_COUNT) return;
-    const start = state.opened * CARDS_PER_PACK;
-    const ids = state.order.slice(start, start + CARDS_PER_PACK);
-    state.opened++;      // le paquet est compté tout de suite (pas de reroll en rechargeant)
-    saveState();
-
-    packEl.classList.add("tearing");
-    setTimeout(() => {
-      showReveal(ids);
-      renderStats();
-      renderPacks();
-    }, 600);
-  }
-
-  let revealIds = [];
-  let revealIdx = 0; // index de la carte du dessus dans la pile
-
-  function showReveal(ids) {
-    revealIds = ids;
-    revealIdx = 0;
-    revealRow.innerHTML = "";
-    revealRow.className = "reveal-row stacked";
-    ids.forEach(id => {
-      const f = document.createElement("div");
-      f.className = "flipper";
-      f.dataset.rarity = CARDS[id].rarity;
-      f.innerHTML =
-        '<div class="flipper-inner">' +
-          '<div class="face back"></div>' +
-          '<div class="face front"></div>' +
-        '</div>';
-      f.querySelector(".back").appendChild(makeBack(id, false));
-      const card = makeCard(id);
-      bindTilt(card);
-      f.querySelector(".front").appendChild(card);
-      f.addEventListener("click", () => {
-        const stacked = revealRow.classList.contains("stacked");
-        // Dans la pile, seule la carte du dessus réagit
-        if (stacked && !f.classList.contains("top")) return;
-        // 1er clic : on retourne la carte. 2e clic : carte suivante.
-        // (Une fois les cartes étalées, un clic sur une carte l'agrandit.)
-        if (!f.classList.contains("flipped")) flip(f, CARDS[id].rarity);
-        else if (stacked) goNext();
-        else zoomCard(id);
-        updateRevealUI();
-      });
-      revealRow.appendChild(f);
-    });
-    layoutStack();
-    updateRevealUI();
-    revealModal.classList.add("open");
-  }
-
-  // Place les cartes en pile : la 1re au-dessus, les cartes déjà vues s'envolent
-  function layoutStack() {
-    const fl = Array.from(revealRow.children);
-    fl.forEach((f, i) => {
-      f.classList.remove("top", "gone");
-      if (i < revealIdx) {
-        f.classList.add("gone");
-        f.style.zIndex = 0;
-        f.style.transform = "";
-        return;
-      }
-      const depth = i - revealIdx;
-      f.style.zIndex = fl.length - depth;
-      const rot = depth === 0 ? 0 : (depth % 2 ? 2 : -2);
-      f.style.transform = `translate(${depth * 7}px, ${depth * 6}px) rotate(${rot}deg)`;
-      if (depth === 0) f.classList.add("top");
-    });
-  }
-
-  const revealCount = document.getElementById("reveal-count");
-  const revealNext = document.getElementById("reveal-next");
-  const revealAll = document.getElementById("reveal-all");
-
-  function updateRevealUI() {
-    const n = revealIds.length;
-    if (!revealRow.classList.contains("stacked")) {
-      revealCount.textContent = "Ton paquet";
-      revealNext.style.display = "none";
-      revealAll.style.display = "none";
-      return;
-    }
-    revealNext.style.display = "";
-    revealAll.style.display = "";
-    const top = revealRow.children[revealIdx];
-    const flipped = top && top.classList.contains("flipped");
-    let label = "Carte " + (revealIdx + 1) + " / " + n;
-    if (flipped) {
-      label += revealIdx < n - 1
-        ? " · clique sur la carte pour passer à la suivante"
-        : " · clique sur la carte pour voir tout le paquet";
-    }
-    revealCount.textContent = label;
-    revealNext.textContent = flipped ? "🔍 Agrandir" : "Retourner la carte";
-  }
-
-  // Carte suivante dans la pile (ou récap après la dernière)
-  function goNext() {
-    if (revealIdx < revealIds.length - 1) {
-      revealIdx++;
-      layoutStack();
-    } else {
-      spreadCards();
-    }
-  }
-
-  // Étale les 5 cartes côte à côte, toutes retournées
-  function spreadCards() {
-    revealRow.classList.remove("stacked");
-    Array.from(revealRow.children).forEach((f, i) => {
-      f.classList.remove("top", "gone");
-      f.style.zIndex = "";
-      f.style.transform = "";
-      setTimeout(() => flip(f, f.dataset.rarity), i * 200);
-    });
-    updateRevealUI();
-  }
-
-  revealNext.addEventListener("click", () => {
-    const top = revealRow.children[revealIdx];
-    if (!top) return;
-    if (!top.classList.contains("flipped")) {
-      flip(top, top.dataset.rarity);
-    } else {
-      zoomCard(revealIds[revealIdx]);
-    }
-    updateRevealUI();
+  if(focus)$('tab-'+name).focus();
+}
+function setTabsBusy(value){tabNames.forEach(name=>$('tab-'+name).disabled=value);}
+tabNames.forEach((name,index)=>{
+  const tab=$('tab-'+name);
+  tab.addEventListener('click',()=>activateTab(name));
+  tab.addEventListener('keydown',event=>{
+    let target;
+    if(event.key==='ArrowRight')target=(index+1)%tabNames.length;
+    else if(event.key==='ArrowLeft')target=(index+tabNames.length-1)%tabNames.length;
+    else if(event.key==='Home')target=0;
+    else if(event.key==='End')target=tabNames.length-1;
+    else return;
+    event.preventDefault();activateTab(tabNames[target],true);
   });
+});
+const pad = n=>String(n).padStart(3,'0');
+function makeCard(id, interactive=false) {
+  const d=CARDS[id], el=document.createElement('article');
+  el.className='card'; el.dataset.rarity=d.rarity;
+  el.style.setProperty('--card-delay',-(id%7)*.7+'s');
+  el.innerHTML='<div class="inner"><div class="top"><h3 class="name"></h3><span class="num"></span></div><div class="art"><span class="card-sigil" aria-hidden="true"></span></div><div class="badges"><span class="rarity"></span><span class="type"></span><span class="rarity-stars" aria-hidden="true"></span></div><p class="desc"></p><span class="card-ornaments" aria-hidden="true"></span><span class="foil-sheen" aria-hidden="true"></span><span class="foil-dust" aria-hidden="true"></span></div>';
+  el.querySelector('.name').textContent=d.name;
+  el.querySelector('.num').textContent='#'+pad(id+1);
+  el.querySelector('.rarity').textContent=RARITY_LABEL[d.rarity];
+  el.querySelector('.type').textContent=d.type;
+  el.querySelector('.desc').textContent=d.desc;
+  el.querySelector('.card-sigil').textContent=RARITY_EFFECTS[d.rarity].symbol;
+  el.querySelector('.rarity-stars').textContent=RARITY_EFFECTS[d.rarity].stars;
+  const art=el.querySelector('.art');
+  if(d.img){const img=new Image();img.alt=d.name;img.loading=interactive?'lazy':'eager';img.addEventListener('error',()=>{img.remove();art.classList.add('missing');});img.src=d.img;art.append(img);}else art.classList.add('missing');
+  if(interactive){el.tabIndex=0;el.setAttribute('role','button');el.setAttribute('aria-label',`Agrandir ${d.name}, ${RARITY_LABEL[d.rarity]}`);el.onclick=()=>zoomCard(id);el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();zoomCard(id);}};}
+  bindTilt(el);
+  if(cardVisibility)cardVisibility.observe(el);else el.classList.add('in-view');
+  return el;
+}
+function makeBack(id,locked=false){const el=document.createElement('div');el.className='cardback'+(locked?' locked':'');el.innerHTML='<div class="pattern"><div class="k">K</div><div class="t"></div></div>';el.querySelector('.t').textContent=locked?'#'+pad(id+1)+' · À découvrir':'KYLIAN · TCG';return el;}
+function bindTilt(el){
+  if(reduceMotion||!matchMedia('(hover:hover)').matches)return;
+  el.onpointermove=e=>{
+    if(el.closest('.flipper:not(.flipped)'))return;
+    const r=el.getBoundingClientRect(),x=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),y=Math.max(0,Math.min(1,(e.clientY-r.top)/r.height));
+    el.style.setProperty('--rx',(0.5-y)*14+'deg');el.style.setProperty('--ry',(x-0.5)*18+'deg');
+    el.style.setProperty('--mx',x*100+'%');el.style.setProperty('--my',y*100+'%');
+  };
+  el.onpointerleave=()=>{el.style.setProperty('--rx','0deg');el.style.setProperty('--ry','0deg');el.style.setProperty('--mx','50%');el.style.setProperty('--my','50%');};
+}
+function releaseCards(root){root.querySelectorAll('.card').forEach(card=>cardVisibility?.unobserve(card));}
+function renderStats(){$('stat-cards').textContent=state.opened*5;$('stat-total').textContent=CARDS.length;$('stat-packs').textContent=8-state.opened;$('tab-packs-count').textContent=8-state.opened;$('tab-collection-count').textContent=`${state.opened*5} / ${CARDS.length}`;$('complete').textContent=state.opened===8?'✦ Les 40 facettes de Kylian sont réunies. Collection complète !':'';}
+function renderPacks(){const root=$('packs');root.replaceChildren();for(let i=0;i<8;i++){const p=document.createElement('button');const used=i<state.opened;p.type='button';p.className='pack'+(used?' opened':'');p.disabled=used||opening;p.dataset.pack=i;p.setAttribute('aria-label',used?`Paquet ${i+1} ouvert`:`Ouvrir le paquet ${i+1}, cinq cartes`);p.innerHTML='<div class="shine"></div><div class="logo">KYLIAN<br>TCG</div><div class="emblem">'+(used?'✓':'✦')+'</div><div class="count">'+(used?'Ouvert':'5 cartes')+'</div>';p.onclick=()=>openPack(p);root.append(p);}}
+function renderCollection(){const owned=new Set(state.order.slice(0,state.opened*5));releaseCards($('grid'));$('grid').replaceChildren();CARDS.forEach((d,i)=>{const el=owned.has(i)?makeCard(i,true):makeBack(i,true);el.dataset.owned=owned.has(i)?'1':'0';el.dataset.rarityKey=d.rarity;$('grid').append(el);});applyFilter();}
+function applyFilter(){$('grid').querySelectorAll('[data-owned]').forEach(el=>el.hidden=currentFilter!=='all'&&!(el.dataset.owned==='1'&&el.dataset.rarityKey===currentFilter));}
+document.querySelectorAll('.filters button').forEach(btn=>{btn.setAttribute('aria-pressed',btn.classList.contains('active'));btn.onclick=()=>{document.querySelectorAll('.filters button').forEach(b=>{b.classList.toggle('active',b===btn);b.setAttribute('aria-pressed',b===btn);});currentFilter=btn.dataset.filter;applyFilter();};});
+function syncModal(){const zoom=$('zoom-modal').classList.contains('open'),reveal=$('reveal-modal').classList.contains('open');$('site-content').inert=zoom||reveal;$('reveal-modal').inert=zoom;document.body.classList.toggle('modal-active',zoom||reveal);}
+function openPack(el){
+  if(opening||state.opened>=8||$('reveal-modal').classList.contains('open'))return;
+  opening=true;returnFocus=el;setTabsBusy(true);
+  revealIds=state.order.slice(state.opened*5,(state.opened+1)*5);
+  state.opened++;saveState();
+  document.querySelectorAll('.pack').forEach(p=>p.disabled=true);
+  el.classList.add('tearing');
+  openingTimer=setTimeout(()=>{openingTimer=null;showReveal();renderStats();renderPacks();renderCollection();},reduceMotion?0:600);
+}
+function showReveal(){
+  revealIdx=0;spread=false;busy=false;clearRevealEffects();const row=$('reveal-row');releaseCards(row);row.replaceChildren();row.className='reveal-row stacked';
+  $('reveal-title').textContent='Un Kylian peut en cacher un autre.';
+  revealIds.forEach((id,i)=>{const f=document.createElement('button');f.type='button';f.className='flipper';f.dataset.rarity=CARDS[id].rarity;f.setAttribute('aria-label',`Retourner la carte ${i+1}`);f.innerHTML='<div class="flipper-inner"><div class="face back" aria-hidden="true"></div><div class="face front" aria-hidden="true"></div></div>';f.querySelector('.back').append(makeBack(id));f.querySelector('.front').append(makeCard(id));f.onclick=()=>{if(spread)zoomCard(id);else if(i===revealIdx)advance();};row.append(f);});
+  $('reveal-modal').classList.add('open');layoutStack();updateRevealUI();syncModal();$('reveal-next').focus();
+}
+function layoutStack(){Array.from($('reveal-row').children).forEach((f,i)=>{const depth=i-revealIdx;f.classList.toggle('top',depth===0);f.classList.toggle('gone',depth<0);f.style.zIndex=depth<0?0:5-depth;f.style.transform=depth<0?'':`translate(${depth*5}px,${depth*4}px) rotate(${depth%2?2:-2}deg)`;f.disabled=depth!==0;f.tabIndex=depth===0?0:-1;});}
+function updateRevealUI(){
+  const top=$('reveal-row').children[revealIdx], flipped=top?.classList.contains('flipped');
+  $('reveal-count').textContent=spread?'5 cartes ajoutées à ta collection':`PAQUET ${state.opened} / 8 · CARTE ${revealIdx+1} / 5`;
+  $('reveal-next').hidden=spread;$('reveal-all').hidden=spread;$('reveal-zoom').hidden=spread||!flipped;
+  $('reveal-next').disabled=busy;$('reveal-all').disabled=busy;$('reveal-zoom').disabled=busy;
+  $('reveal-next').textContent=!flipped?'Révéler la carte':revealIdx<4?'Carte suivante →':'Voir mon paquet';
+  $('reveal-close').textContent=spread?'Voir ma collection':'Garder ce paquet et fermer';
+  $('reveal-help').textContent=spread?'Sélectionne une carte pour la regarder de plus près.':'Clique sur la carte ou utilise le bouton pour continuer.';
+  const rarity=!spread&&flipped?CARDS[revealIds[revealIdx]].rarity:'hidden';
+  $('reveal-modal').dataset.rarity=rarity;
+  $('reveal-modal').style.setProperty('--stage-color',COLORS[rarity]||'#a88bc4');
+  $('rarity-announcement').textContent=spread?'Le casting est au complet.':flipped?RARITY_LABEL[CARDS[revealIds[revealIdx]].rarity]:'À toi de jouer.';
+  $('reveal-dots').innerHTML=revealIds.map((_,i)=>`<span class="${spread||$('reveal-row').children[i].classList.contains('flipped')?'seen ':''}${!spread&&i===revealIdx?'current':''}"></span>`).join('');
+}
+function flip(f){f.classList.add('flipped','pop-'+f.dataset.rarity);f.querySelector('.front').setAttribute('aria-hidden','false');f.setAttribute('aria-label',`${CARDS[revealIds[Array.from(f.parentNode.children).indexOf(f)]] .name}, ${RARITY_LABEL[f.dataset.rarity]}. Continuer.`);}
+function clearRevealEffects(){
+  $('reveal-modal').dataset.phase='idle';
+  $('particles').classList.remove('burst');
+  $('rarity-announcement').classList.remove('shown');
+  $('reveal-row').querySelectorAll('.charging,.unveiling').forEach(f=>f.classList.remove('charging','unveiling'));
+}
+function advance(){
+  if(busy||spread)return;const top=$('reveal-row').children[revealIdx];
+  if(!top.classList.contains('flipped')){
+    busy=true;updateRevealUI();
+    const rarity=top.dataset.rarity,effect=RARITY_EFFECTS[rarity],modal=$('reveal-modal');
+    const unveil=()=>{
+      top.classList.remove('charging');top.classList.add('unveiling');flip(top);playReveal(rarity);updateRevealUI();modal.dataset.phase='revealed';
+      $('rarity-announcement').classList.remove('shown');void $('rarity-announcement').offsetWidth;$('rarity-announcement').classList.add('shown');
+      const particles=$('particles');particles.classList.remove('burst');if(!reduceMotion&&rarity!=='common'){void particles.offsetWidth;particles.classList.add('burst');}
+      if(reduceMotion){busy=false;flipTimer=null;updateRevealUI();}
+      else flipTimer=setTimeout(()=>{busy=false;flipTimer=null;top.classList.remove('unveiling');updateRevealUI();},effect.turn+160);
+    };
+    if(reduceMotion){unveil();return;}
+    modal.dataset.rarity=rarity;modal.dataset.phase='charging';modal.style.setProperty('--stage-color',COLORS[rarity]);
+    top.classList.add('charging');$('reveal-next').textContent='Révélation…';$('rarity-announcement').textContent=effect.tease;
+    flipTimer=setTimeout(unveil,effect.charge);
+  }else if(revealIdx<4){revealIdx++;clearRevealEffects();layoutStack();updateRevealUI();}else spreadCards();
+}
+function spreadCards(){if(busy)return;clearRevealEffects();spread=true;$('reveal-row').classList.remove('stacked');$('reveal-title').textContent='Ton nouveau casting.';Array.from($('reveal-row').children).forEach(f=>{f.classList.remove('top','gone');f.style.transform='';f.style.zIndex='';f.disabled=false;f.tabIndex=0;flip(f);f.setAttribute('aria-label',f.getAttribute('aria-label').replace('Continuer.','Agrandir la carte.'));});updateRevealUI();$('reveal-close').focus();}
+function closeReveal({showCollection=false}={}){clearTimeout(flipTimer);flipTimer=null;busy=false;opening=false;setTabsBusy(false);clearRevealEffects();$('reveal-modal').classList.remove('open');releaseCards($('reveal-row'));$('reveal-row').replaceChildren();renderPacks();syncModal();if(showCollection){activateTab('collection',true);}else{const next=$('packs').querySelector('button:not(:disabled)');(next||$('reset')).focus();}}
+$('reveal-next').onclick=advance;$('reveal-all').onclick=spreadCards;$('reveal-close').onclick=()=>closeReveal({showCollection:spread});$('reveal-zoom').onclick=()=>zoomCard(revealIds[revealIdx]);
+function zoomCard(id){zoomReturnFocus=document.activeElement;releaseCards($('modal-slot'));$('modal-slot').replaceChildren(makeCard(id));$('zoom-modal').dataset.rarity=CARDS[id].rarity;$('zoom-modal').style.setProperty('--stage-color',COLORS[CARDS[id].rarity]);$('zoom-modal').classList.add('open');$('zoom-title').textContent=CARDS[id].name;syncModal();$('zoom-close').focus();}
+function closeZoom(){$('zoom-modal').classList.remove('open');releaseCards($('modal-slot'));$('modal-slot').replaceChildren();syncModal();if(zoomReturnFocus?.isConnected)zoomReturnFocus.focus();}
+$('zoom-close').onclick=closeZoom;$('zoom-modal').onclick=e=>{if(e.target===$('zoom-modal'))closeZoom();};
+document.addEventListener('keydown',e=>{const modal=$('zoom-modal').classList.contains('open')?$('zoom-modal'):$('reveal-modal').classList.contains('open')?$('reveal-modal'):null;if(!modal)return;
+  if(e.key==='Escape'){e.preventDefault();modal.id==='zoom-modal'?closeZoom():closeReveal();}
+  if(e.key==='Tab'){const els=Array.from(modal.querySelectorAll('button:not(:disabled),[tabindex="0"]')).filter(el=>!el.hidden&&el.getClientRects().length);const first=els[0],last=els.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}
+});
+$('reset').onclick=()=>{if(opening)return;if(!confirm('Tout réinitialiser ? Les paquets seront remélangés et ta collection effacée.'))return;state=newState();saveState();renderStats();renderPacks();renderCollection();};
+$('sound-toggle').onclick=()=>{soundEnabled=!soundEnabled;try{if(soundEnabled){audioCtx??=new(window.AudioContext||window.webkitAudioContext)();audioCtx.resume().catch(()=>{});}}catch{soundEnabled=false;}$('sound-toggle').textContent=soundEnabled?'Son activé':'Son désactivé';$('sound-toggle').setAttribute('aria-pressed',soundEnabled);};
+function playReveal(rarity){if(!soundEnabled||!audioCtx)return;const notes={common:[261.63],rare:[329.63,493.88],epic:[392,493.88,587.33],legendary:[392,493.88,587.33,783.99]}[rarity];notes.forEach((hz,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain(),t=audioCtx.currentTime+i*.12;o.type='sine';o.frequency.value=hz;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.045,t+.025);g.gain.exponentialRampToValueAtTime(.0001,t+.75);o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+.8);});}
+for(let i=0;i<24;i++){const p=document.createElement('i'),angle=i*Math.PI/12;p.style.setProperty('--dx',Math.cos(angle)*(130+i%4*35)+'px');p.style.setProperty('--dy',Math.sin(angle)*(130+i%4*35)+'px');p.style.animationDelay=(i%3)*.05+'s';$('particles').append(p);}
+saveState();renderStats();renderPacks();renderCollection();
 
-  function flip(f, rarity) {
-    if (f.classList.contains("flipped")) return;
-    f.classList.add("flipped", "pop-" + rarity);
-  }
-
-  revealAll.addEventListener("click", spreadCards);
-
-  function closeReveal() {
-    revealModal.classList.remove("open");
-    renderCollection();
-  }
-  document.getElementById("reveal-close").addEventListener("click", closeReveal);
-
-  /* ---------- Carte agrandie ---------- */
-  const zoomModal = document.getElementById("zoom-modal");
-  const slot = document.getElementById("modal-slot");
-  function zoomCard(id) {
-    slot.innerHTML = "";
-    const c = makeCard(id);
-    c.style.cursor = "default";
-    bindTilt(c);
-    slot.appendChild(c);
-    zoomModal.classList.add("open");
-  }
-  zoomModal.addEventListener("click", e => {
-    if (e.target === zoomModal || e.target.classList.contains("close")) zoomModal.classList.remove("open");
-  });
-  document.addEventListener("keydown", e => {
-    if (e.key === "Escape") {
-      // Échap ferme d'abord la carte agrandie, puis le paquet
-      if (zoomModal.classList.contains("open")) zoomModal.classList.remove("open");
-      else if (revealModal.classList.contains("open")) closeReveal();
-    }
-  });
-
-  /* ---------- Réinitialisation ---------- */
-  document.getElementById("reset").addEventListener("click", () => {
-    if (!confirm("Tout réinitialiser ? Les paquets seront remélangés et ta collection effacée.")) return;
-    state = newState();
-    saveState();
-    renderStats();
-    renderPacks();
-    renderCollection();
-  });
-
-  /* ---------- Démarrage ---------- */
-  renderStats();
-  renderPacks();
-  renderCollection();
 </script>
 </body>
 </html>
