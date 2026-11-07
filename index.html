@@ -186,7 +186,7 @@ const ACCOUNTS_KEY='kylian-tcg-accounts', SESSION_KEY='kylian-tcg-session', LEGA
 const getAccounts=()=>{try{const a=JSON.parse(localStorage.getItem(ACCOUNTS_KEY));return a&&typeof a==='object'&&!Array.isArray(a)?a:{};}catch{return {};}};
 let currentUser=(()=>{try{const n=localStorage.getItem(SESSION_KEY);const a=n&&getAccounts()[n.toLowerCase()];return a?a.name:null;}catch{return null;}})();
 const storageKey=()=>currentUser?STORAGE_KEY+':'+currentUser.toLowerCase():null;
-const COOLDOWN_MS = 3600000; // 1 booster toutes les minutes
+const COOLDOWN_MS = 600000; // 1 booster toutes les minutes
 // Chances de tirer chaque rareté (puis une carte au hasard dans cette rareté). Modifiable.
 const RARITY_ORDER = ['common','rare','epic','legendary'];
 const RARITY_WEIGHTS = {common:60, rare:25, epic:11, legendary:4};
