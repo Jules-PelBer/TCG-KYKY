@@ -16,6 +16,7 @@
     <div class="stat">Cartes uniques : <b id="stat-cards">0</b> / <span id="stat-total">40</span></div>
     <div class="stat">Boosters ouverts : <b id="stat-packs">0</b></div>
   </div>
+  <div class="account-bar" id="account-bar" hidden><span>Connecté : <b id="account-name"></b></span><button class="btn" id="logout" type="button">Se déconnecter</button></div>
 </header>
 <div class="site-tabs" role="tablist" aria-label="Navigation du jeu">
   <button class="site-tab" type="button" id="tab-packs" role="tab" aria-selected="true" aria-controls="panel-packs" tabindex="0">
@@ -23,6 +24,12 @@
   </button>
   <button class="site-tab" type="button" id="tab-collection" role="tab" aria-selected="false" aria-controls="panel-collection" tabindex="-1">
     <span>Ma collection</span><span class="tab-count" id="tab-collection-count" aria-hidden="true">0 / 40</span>
+  </button>
+  <button class="site-tab" type="button" id="tab-friends" role="tab" aria-selected="false" aria-controls="panel-friends" tabindex="-1">
+    <span>Amis</span><span class="tab-count" id="tab-friends-count" aria-hidden="true">0</span>
+  </button>
+  <button class="site-tab" type="button" id="tab-trades" role="tab" aria-selected="false" aria-controls="panel-trades" tabindex="-1">
+    <span>Échanges</span><span class="tab-count" id="tab-trades-count" aria-hidden="true" hidden>0</span>
   </button>
 </div>
 
@@ -47,6 +54,43 @@
 </div>
 <div class="grid" id="grid"></div>
 </section>
+<section id="panel-friends" class="tab-panel" role="tabpanel" aria-labelledby="tab-friends" tabindex="0" hidden>
+<h2 class="section">Amis</h2>
+<div class="social-wrap">
+  <form class="friend-form" id="friend-form" novalidate>
+    <input id="friend-input" placeholder="Pseudo de ton ami" maxlength="20" autocomplete="off" aria-label="Pseudo de ton ami">
+    <button class="btn primary" type="submit">Envoyer la demande</button>
+  </form>
+  <p class="social-msg" id="friend-msg" role="status" aria-live="polite"></p>
+  <h3 class="social-title">Demandes reçues</h3>
+  <div class="social-list" id="req-in"></div>
+  <h3 class="social-title">Demandes envoyées</h3>
+  <div class="social-list" id="req-out"></div>
+  <h3 class="social-title">Mes amis</h3>
+  <div class="social-list" id="friend-list"></div>
+</div>
+</section>
+<section id="panel-trades" class="tab-panel" role="tabpanel" aria-labelledby="tab-trades" tabindex="0" hidden>
+<h2 class="section">Échanges</h2>
+<div class="social-wrap">
+  <h3 class="social-title">Proposer un échange</h3>
+  <div class="trade-form">
+    <label class="trade-friend">Avec <select id="trade-friend"></select></label>
+    <div class="trade-cols">
+      <div><h4>Je donne <span id="give-count"></span></h4><div class="picker" id="give-picker"></div></div>
+      <div><h4>Je demande <span id="want-count"></span></h4><div class="picker" id="want-picker"></div></div>
+    </div>
+    <button class="btn primary" id="trade-send" type="button">Proposer l'échange</button>
+  </div>
+  <p class="social-msg" id="trade-msg" role="status" aria-live="polite"></p>
+  <h3 class="social-title">Échanges reçus</h3>
+  <div class="social-list" id="trade-in"></div>
+  <h3 class="social-title">Échanges envoyés</h3>
+  <div class="social-list" id="trade-out"></div>
+  <h3 class="social-title">Historique</h3>
+  <div class="social-list" id="trade-history"></div>
+</div>
+</section>
 </main>
 
 <footer>Kylian TCG · Tous droits réservés</footer>
@@ -61,6 +105,23 @@
 </div>
 <div class="modal" id="zoom-modal" role="dialog" aria-modal="true" aria-labelledby="zoom-title">
   <button class="close" id="zoom-close" aria-label="Fermer la carte">×</button><h3 id="zoom-title" hidden>Carte agrandie</h3><div id="modal-slot"></div><p class="zoom-caption">Échap ou × pour revenir</p>
+</div>
+<div class="modal" id="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+  <div class="auth-box">
+    <h3 id="auth-title">Kylian TCG</h3>
+    <div class="auth-tabs">
+      <button type="button" class="active" id="auth-tab-login">Connexion</button>
+      <button type="button" id="auth-tab-register">Créer un compte</button>
+    </div>
+    <form id="auth-form" novalidate>
+      <label>Pseudo<input id="auth-user" name="username" autocomplete="username" maxlength="20" required></label>
+      <label>Mot de passe<input id="auth-pass" name="password" type="password" autocomplete="current-password" required></label>
+      <label id="auth-pass2-wrap" hidden>Confirmer le mot de passe<input id="auth-pass2" type="password" autocomplete="new-password"></label>
+      <p class="auth-error" id="auth-error" role="alert"></p>
+      <button class="btn primary" id="auth-submit" type="submit">Se connecter</button>
+    </form>
+    <p class="auth-note">Les comptes sont enregistrés sur cet appareil, dans ce navigateur.</p>
+  </div>
 </div>
 <script>
   /* =====================================================================
@@ -121,6 +182,10 @@
   ];
 
 const CARDS_PER_PACK = 5, STORAGE_KEY = 'kylian-tcg-v1';
+const ACCOUNTS_KEY='kylian-tcg-accounts', SESSION_KEY='kylian-tcg-session', LEGACY_CLAIMED_KEY='kylian-tcg-legacy-claimed';
+const getAccounts=()=>{try{const a=JSON.parse(localStorage.getItem(ACCOUNTS_KEY));return a&&typeof a==='object'&&!Array.isArray(a)?a:{};}catch{return {};}};
+let currentUser=(()=>{try{const n=localStorage.getItem(SESSION_KEY);const a=n&&getAccounts()[n.toLowerCase()];return a?a.name:null;}catch{return null;}})();
+const storageKey=()=>currentUser?STORAGE_KEY+':'+currentUser.toLowerCase():null;
 const COOLDOWN_MS = 60000; // 1 booster toutes les minutes
 // Chances de tirer chaque rareté (puis une carte au hasard dans cette rareté). Modifiable.
 const RARITY_ORDER = ['common','rare','epic','legendary'];
@@ -140,9 +205,10 @@ const cardVisibility = typeof IntersectionObserver === 'undefined' ? null : new 
   entries.forEach(entry=>entry.target.classList.toggle('in-view',entry.isIntersecting));
 }, {rootMargin:'40px'});
 function newState() {return {owned:{},lastOpen:0,opened:0};}
-function loadState() {
+function readState(k) {
   try {
-    const s=JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if(!k)return newState();
+    const s=JSON.parse(localStorage.getItem(k));
     if(s && s.owned && typeof s.owned==='object' && !Array.isArray(s.owned)) {
       const owned={};
       Object.entries(s.owned).forEach(([k,v])=>{const id=Number(k);if(Number.isInteger(id)&&id>=0&&id<CARDS.length&&Number.isInteger(v)&&v>0)owned[id]=v;});
@@ -157,11 +223,12 @@ function loadState() {
   } catch {}
   return newState();
 }
+function loadState() {return readState(storageKey());}
 let state=loadState(), currentFilter='all', opening=false, openingTimer=null, revealIds=[], revealNew=[], revealIdx=0, busy=false, flipTimer=null, spread=false;
 let returnFocus=null, zoomReturnFocus=null, audioCtx=null, soundEnabled=false;
-function saveState(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{}}
+function saveState(){const k=storageKey();if(!k)return;try{localStorage.setItem(k,JSON.stringify(state));}catch{}}
 /* Navigation: changing tabs keeps the collection, filters and saved game intact. */
-const tabNames=['packs','collection'];
+const tabNames=['packs','collection','friends','trades'];
 function activateTab(name,focus=false){
   if(!tabNames.includes(name))return;
   tabNames.forEach(key=>{
@@ -170,6 +237,7 @@ function activateTab(name,focus=false){
     tab.tabIndex=selected?0:-1;
     $('panel-'+key).hidden=!selected;
   });
+  if(name==='friends'||name==='trades')renderSocial();
   if(focus)$('tab-'+name).focus();
 }
 function setTabsBusy(value){tabNames.forEach(name=>$('tab-'+name).disabled=value);}
@@ -246,10 +314,10 @@ function updateCooldown(){
 }
 function renderStats(){$('stat-cards').textContent=ownedCount();$('stat-total').textContent=CARDS.length;$('stat-packs').textContent=state.opened;$('tab-collection-count').textContent=`${ownedCount()} / ${CARDS.length}`;$('complete').textContent=isComplete()?'✦ Les 40 facettes de Kylian sont réunies. Collection complète !':'';updateCooldown();}
 function renderPacks(){const root=$('packs');root.replaceChildren();const p=document.createElement('button');p.type='button';p.className='pack';p.id='pack-main';p.innerHTML='<div class="shine"></div><div class="logo">KYLIAN<br>TCG</div><div class="emblem">✦</div><div class="count">5 cartes</div>';p.onclick=()=>openPack(p);root.append(p);updateCooldown();}
-function renderCollection(){releaseCards($('grid'));$('grid').replaceChildren();CARDS.forEach((d,i)=>{const n=state.owned[i]||0;const el=n>0?makeCard(i,true):makeBack(i,true);if(n>1){const b=document.createElement('span');b.className='dupe-count';b.textContent='×'+n;b.title=n+' exemplaires';el.append(b);}el.dataset.owned=n>0?'1':'0';el.dataset.rarityKey=d.rarity;$('grid').append(el);});applyFilter();}
+function renderCollection(){releaseCards($('grid'));$('grid').replaceChildren();CARDS.forEach((d,i)=>{const n=state.owned[i]||0;const el=n>0?makeCard(i,true):makeBack(i,true);if(n>0){const b=document.createElement('span');b.className='dupe-count';b.textContent='×'+n;b.title=n+(n>1?' exemplaires':' exemplaire');b.setAttribute('aria-hidden','true');el.append(b);}el.dataset.owned=n>0?'1':'0';el.dataset.rarityKey=d.rarity;$('grid').append(el);});applyFilter();}
 function applyFilter(){$('grid').querySelectorAll('[data-owned]').forEach(el=>el.hidden=currentFilter!=='all'&&!(el.dataset.owned==='1'&&el.dataset.rarityKey===currentFilter));}
 document.querySelectorAll('.filters button').forEach(btn=>{btn.setAttribute('aria-pressed',btn.classList.contains('active'));btn.onclick=()=>{document.querySelectorAll('.filters button').forEach(b=>{b.classList.toggle('active',b===btn);b.setAttribute('aria-pressed',b===btn);});currentFilter=btn.dataset.filter;applyFilter();};});
-function syncModal(){const zoom=$('zoom-modal').classList.contains('open'),reveal=$('reveal-modal').classList.contains('open');$('site-content').inert=zoom||reveal;$('reveal-modal').inert=zoom;document.body.classList.toggle('modal-active',zoom||reveal);}
+function syncModal(){const zoom=$('zoom-modal').classList.contains('open'),reveal=$('reveal-modal').classList.contains('open'),auth=$('auth-modal').classList.contains('open');$('site-content').inert=zoom||reveal||auth;$('reveal-modal').inert=zoom||auth;document.body.classList.toggle('modal-active',zoom||reveal||auth);}
 function openPack(el){
   if(opening||isComplete()||cooldownLeft()>0||$('reveal-modal').classList.contains('open'))return;
   opening=true;returnFocus=el;setTabsBusy(true);
@@ -320,7 +388,262 @@ $('reset').onclick=()=>{if(opening)return;if(!confirm('Tout réinitialiser ? Ta 
 $('sound-toggle').onclick=()=>{soundEnabled=!soundEnabled;try{if(soundEnabled){audioCtx??=new(window.AudioContext||window.webkitAudioContext)();audioCtx.resume().catch(()=>{});}}catch{soundEnabled=false;}$('sound-toggle').textContent=soundEnabled?'Son activé':'Son désactivé';$('sound-toggle').setAttribute('aria-pressed',soundEnabled);};
 function playReveal(rarity){if(!soundEnabled||!audioCtx)return;const notes={common:[261.63],rare:[329.63,493.88],epic:[392,493.88,587.33],legendary:[392,493.88,587.33,783.99]}[rarity];notes.forEach((hz,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain(),t=audioCtx.currentTime+i*.12;o.type='sine';o.frequency.value=hz;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.045,t+.025);g.gain.exponentialRampToValueAtTime(.0001,t+.75);o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+.8);});}
 for(let i=0;i<24;i++){const p=document.createElement('i'),angle=i*Math.PI/12;p.style.setProperty('--dx',Math.cos(angle)*(130+i%4*35)+'px');p.style.setProperty('--dy',Math.sin(angle)*(130+i%4*35)+'px');p.style.animationDelay=(i%3)*.05+'s';$('particles').append(p);}
-saveState();renderStats();renderPacks();renderCollection();setInterval(updateCooldown,250);
+/* ---------- Comptes (stockés dans le navigateur) ---------- */
+let authMode='login';
+function randomHex(n){const a=new Uint8Array(n);if(window.crypto&&crypto.getRandomValues)crypto.getRandomValues(a);else for(let i=0;i<n;i++)a[i]=Math.floor(Math.random()*256);return Array.from(a,b=>b.toString(16).padStart(2,'0')).join('');}
+async function hashPassword(pw,salt){
+  if(!(window.crypto&&crypto.subtle)){let h=5381;const t=salt+pw;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return 'f'+h;}
+  const enc=new TextEncoder(),key=await crypto.subtle.importKey('raw',enc.encode(pw),'PBKDF2',false,['deriveBits']);
+  const bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:enc.encode(salt),iterations:100000,hash:'SHA-256'},key,256);
+  return Array.from(new Uint8Array(bits),b=>b.toString(16).padStart(2,'0')).join('');
+}
+function setAuthMode(mode){
+  authMode=mode;const reg=mode==='register';
+  $('auth-tab-login').classList.toggle('active',!reg);$('auth-tab-register').classList.toggle('active',reg);
+  $('auth-pass2-wrap').hidden=!reg;$('auth-submit').textContent=reg?'Créer mon compte':'Se connecter';
+  $('auth-pass').autocomplete=reg?'new-password':'current-password';$('auth-error').textContent='';
+}
+function showAuth(mode='login'){
+  setAuthMode(mode);$('auth-form').reset();$('auth-modal').classList.add('open');syncModal();$('auth-user').focus();
+}
+function updateAccountUI(){$('account-bar').hidden=!currentUser;$('account-name').textContent=currentUser||'';}
+function startSession(name){
+  currentUser=name;try{localStorage.setItem(SESSION_KEY,name);}catch{}
+  state=loadState();saveState();
+  $('auth-modal').classList.remove('open');syncModal();updateAccountUI();
+  tradeFriend='';tradeGive.clear();tradeWant.clear();say('friend-msg','');say('trade-msg','');renderStats();renderPacks();renderCollection();renderSocial();activateTab('packs');
+}
+function logout(){
+  if(opening)return;
+  currentUser=null;try{localStorage.removeItem(SESSION_KEY);}catch{}
+  state=newState();tradeFriend='';tradeGive.clear();tradeWant.clear();updateAccountUI();renderStats();renderPacks();renderCollection();renderSocial();showAuth('login');
+}
+$('auth-tab-login').onclick=()=>setAuthMode('login');
+$('auth-tab-register').onclick=()=>setAuthMode('register');
+$('logout').onclick=logout;
+$('auth-form').onsubmit=async e=>{
+  e.preventDefault();
+  const err=m=>{$('auth-error').textContent=m;},name=$('auth-user').value.trim(),pw=$('auth-pass').value,accounts=getAccounts(),key=name.toLowerCase();
+  err('');
+  if(authMode==='register'){
+    if(!/^[A-Za-z0-9_.-]{3,20}$/.test(name))return err('Pseudo : 3 à 20 caractères (lettres, chiffres, _ . -).');
+    if(pw.length<6)return err('Mot de passe : 6 caractères minimum.');
+    if(pw!==$('auth-pass2').value)return err('Les mots de passe ne correspondent pas.');
+    if(accounts[key])return err('Ce pseudo est déjà pris.');
+    $('auth-submit').disabled=true;
+    try{
+      const salt=randomHex(16);
+      accounts[key]={name,salt,hash:await hashPassword(pw,salt)};
+      localStorage.setItem(ACCOUNTS_KEY,JSON.stringify(accounts));
+      // La partie déjà jouée avant les comptes est rattachée au premier compte créé.
+      const old=localStorage.getItem(STORAGE_KEY);
+      if(old&&!localStorage.getItem(LEGACY_CLAIMED_KEY)){localStorage.setItem(STORAGE_KEY+':'+key,old);localStorage.setItem(LEGACY_CLAIMED_KEY,key);}
+      startSession(name);
+    }catch{err('Impossible de créer le compte (stockage du navigateur indisponible ?).');}
+    finally{$('auth-submit').disabled=false;}
+  }else{
+    const a=accounts[key];
+    if(!name||!pw)return err('Entre ton pseudo et ton mot de passe.');
+    $('auth-submit').disabled=true;
+    try{
+      if(!a||await hashPassword(pw,a.salt)!==a.hash)return err('Pseudo ou mot de passe incorrect.');
+      startSession(a.name);
+    }finally{$('auth-submit').disabled=false;}
+  }
+};
+/* ---------- Amis & échanges (entre les comptes de ce navigateur) ---------- */
+const SOCIAL_KEY='kylian-tcg-social', MAX_TRADE=5;
+const RARITY_RANK={common:0,rare:1,epic:2,legendary:3};
+const STATUS_LABEL={accepted:'Accepté',declined:'Refusé',cancelled:'Annulé',failed:'Échec : cartes indisponibles'};
+let tradeFriend='', tradeGive=new Set(), tradeWant=new Set();
+const meKey=()=>currentUser?currentUser.toLowerCase():'';
+const nameOf=k=>(getAccounts()[k]||{}).name||k;
+function getSocial(){
+  try{
+    const s=JSON.parse(localStorage.getItem(SOCIAL_KEY))||{};
+    return {friends:s.friends&&typeof s.friends==='object'&&!Array.isArray(s.friends)?s.friends:{},requests:Array.isArray(s.requests)?s.requests:[],trades:Array.isArray(s.trades)?s.trades:[]};
+  }catch{return {friends:{},requests:[],trades:[]};}
+}
+function putSocial(x){try{localStorage.setItem(SOCIAL_KEY,JSON.stringify(x));return true;}catch{return false;}}
+const friendsOf=(soc,k)=>Array.isArray(soc.friends[k])?soc.friends[k]:[];
+function h(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
+function say(id,msg,ok=false){const e=$(id);e.textContent=msg;e.classList.toggle('ok',!!ok&&!!msg);}
+function saveOr(soc,id){if(putSocial(soc))return true;say(id,"Impossible d'enregistrer (stockage du navigateur indisponible).");return false;}
+function link(soc,a,b){[[a,b],[b,a]].forEach(([x,y])=>{const l=friendsOf(soc,x).slice();if(!l.includes(y))l.push(y);soc.friends[x]=l;});}
+function unlink(soc,a,b){[[a,b],[b,a]].forEach(([x,y])=>{soc.friends[x]=friendsOf(soc,x).filter(k=>k!==y);});}
+
+/* Amis */
+function sendFriendRequest(raw){
+  const key=raw.trim().toLowerCase(),acc=getAccounts(),me=meKey(),soc=getSocial();
+  if(!key)return say('friend-msg','Entre le pseudo de ton ami.');
+  if(key===me)return say('friend-msg',"Tu ne peux pas t'ajouter toi-même.");
+  if(!acc[key])return say('friend-msg','Aucun compte avec ce pseudo sur cet appareil.');
+  if(friendsOf(soc,me).includes(key))return say('friend-msg',`${nameOf(key)} est déjà dans tes amis.`);
+  if(soc.requests.some(r=>r.from===me&&r.to===key))return say('friend-msg','Demande déjà envoyée.');
+  if(soc.requests.some(r=>r.from===key&&r.to===me)){$('friend-input').value='';return acceptRequest(key);}
+  soc.requests.push({from:me,to:key,at:Date.now()});
+  if(!saveOr(soc,'friend-msg'))return;
+  $('friend-input').value='';say('friend-msg',`Demande envoyée à ${nameOf(key)}.`,true);renderSocial();
+}
+function acceptRequest(from){
+  const me=meKey(),soc=getSocial();
+  soc.requests=soc.requests.filter(r=>!((r.from===from&&r.to===me)||(r.from===me&&r.to===from)));
+  link(soc,me,from);
+  if(!saveOr(soc,'friend-msg'))return;
+  say('friend-msg',`${nameOf(from)} est maintenant ton ami.`,true);renderSocial();
+}
+function dropRequest(from,to){
+  const soc=getSocial();soc.requests=soc.requests.filter(r=>!(r.from===from&&r.to===to));
+  if(saveOr(soc,'friend-msg')){say('friend-msg','');renderSocial();}
+}
+function removeFriend(k){
+  if(!confirm(`Retirer ${nameOf(k)} de tes amis ? Les échanges en attente avec lui seront annulés.`))return;
+  const me=meKey(),soc=getSocial();unlink(soc,me,k);
+  soc.trades.forEach(t=>{if(t.status==='pending'&&((t.from===me&&t.to===k)||(t.from===k&&t.to===me))){t.status='cancelled';t.doneAt=Date.now();}});
+  if(saveOr(soc,'friend-msg')){say('friend-msg',`${nameOf(k)} a été retiré de tes amis.`,true);renderSocial();}
+}
+
+/* Échanges */
+function proposeTrade(){
+  const me=meKey(),soc=getSocial();
+  if(!tradeFriend||!friendsOf(soc,me).includes(tradeFriend))return say('trade-msg','Choisis un ami.');
+  if(!tradeGive.size||!tradeWant.size)return say('trade-msg','Choisis au moins une carte à donner et une carte à recevoir.');
+  const theirs=readState(STORAGE_KEY+':'+tradeFriend).owned;
+  if(![...tradeGive].every(i=>state.owned[i]>0)||![...tradeWant].every(i=>theirs[i]>0))return say('trade-msg',"Certaines cartes ne sont plus disponibles.");
+  soc.trades.push({id:Date.now().toString(36)+randomHex(3),from:me,to:tradeFriend,give:[...tradeGive],want:[...tradeWant],status:'pending',at:Date.now()});
+  if(!saveOr(soc,'trade-msg'))return;
+  const to=tradeFriend;tradeGive.clear();tradeWant.clear();
+  say('trade-msg',`Échange proposé à ${nameOf(to)}. Il pourra l'accepter en se connectant.`,true);renderSocial();
+}
+function closeTrade(id,status){
+  const me=meKey(),soc=getSocial(),t=soc.trades.find(x=>x.id===id&&x.status==='pending');
+  if(!t||(status==='declined'&&t.to!==me)||(status==='cancelled'&&t.from!==me))return;
+  t.status=status;t.doneAt=Date.now();
+  if(saveOr(soc,'trade-msg')){say('trade-msg',status==='declined'?'Échange refusé.':'Échange annulé.',true);renderSocial();}
+}
+function acceptTrade(id){
+  const me=meKey(),soc=getSocial(),t=soc.trades.find(x=>x.id===id&&x.status==='pending'&&x.to===me);
+  if(!t)return say('trade-msg',"Cet échange n'existe plus.");
+  const keyA=STORAGE_KEY+':'+t.from,a=readState(keyA),b={...state,owned:{...state.owned}};
+  const valid=friendsOf(soc,me).includes(t.from)&&t.give.every(i=>a.owned[i]>0)&&t.want.every(i=>b.owned[i]>0);
+  if(!valid){
+    t.status='failed';t.doneAt=Date.now();
+    if(saveOr(soc,'trade-msg')){say('trade-msg',"Échange impossible : une des cartes n'est plus disponible.");renderSocial();}
+    return;
+  }
+  const take=(o,i)=>{if(--o[i]<=0)delete o[i];},add=(o,i)=>{o[i]=(o[i]||0)+1;};
+  t.give.forEach(i=>{take(a.owned,i);add(b.owned,i);});
+  t.want.forEach(i=>{take(b.owned,i);add(a.owned,i);});
+  t.status='accepted';t.doneAt=Date.now();
+  try{localStorage.setItem(keyA,JSON.stringify(a));localStorage.setItem(storageKey(),JSON.stringify(b));}
+  catch{return say('trade-msg',"Impossible d'enregistrer l'échange.");}
+  state=b;
+  if(!putSocial(soc))say('trade-msg',"Échange effectué, mais l'historique n'a pas pu être enregistré.");
+  else say('trade-msg','Échange réussi ! Les cartes ont été ajoutées à ta collection.',true);
+  renderStats();renderCollection();renderSocial();
+}
+
+/* Affichage */
+function mkBtn(label,cls,fn){const b=h('button','btn'+(cls?' '+cls:''),label);b.type='button';b.onclick=fn;return b;}
+function emptyNote(text){return h('p','empty',text);}
+function mini(id,opts={}){
+  const d=CARDS[id],b=h('button','mini');b.type='button';b.dataset.rarity=d.rarity;b.title=RARITY_LABEL[d.rarity];
+  b.append(h('span','mini-num','#'+pad(id+1)),h('span','mini-name',d.name));
+  if(opts.count!=null)b.append(h('span','mini-count','×'+opts.count));
+  b.onclick=opts.onClick?()=>opts.onClick(b):()=>zoomCard(id);
+  return b;
+}
+function miniRow(ids){const r=h('div','mini-row');ids.forEach(i=>r.append(mini(i)));return r;}
+function updateTradeCounts(){
+  $('give-count').textContent=tradeGive.size?`(${tradeGive.size}/${MAX_TRADE})`:'';
+  $('want-count').textContent=tradeWant.size?`(${tradeWant.size}/${MAX_TRADE})`:'';
+}
+function renderPickers(){
+  const give=$('give-picker'),want=$('want-picker');give.replaceChildren();want.replaceChildren();
+  $('trade-send').disabled=!tradeFriend;
+  if(!tradeFriend){give.append(emptyNote("Ajoute d'abord un ami dans l'onglet Amis."));updateTradeCounts();return;}
+  const theirs=readState(STORAGE_KEY+':'+tradeFriend).owned;
+  [...tradeGive].forEach(i=>{if(!(state.owned[i]>0))tradeGive.delete(i);});
+  [...tradeWant].forEach(i=>{if(!(theirs[i]>0))tradeWant.delete(i);});
+  const sortIds=o=>Object.keys(o).map(Number).filter(i=>o[i]>0&&CARDS[i]).sort((a,b)=>RARITY_RANK[CARDS[b].rarity]-RARITY_RANK[CARDS[a].rarity]||a-b);
+  const fill=(root,owned,set,emptyText)=>{
+    const ids=sortIds(owned);if(!ids.length)root.append(emptyNote(emptyText));
+    ids.forEach(i=>{
+      const chip=mini(i,{count:owned[i],onClick:node=>{
+        if(set.has(i))set.delete(i);
+        else if(set.size<MAX_TRADE)set.add(i);
+        else return say('trade-msg',`${MAX_TRADE} cartes maximum de chaque côté.`);
+        node.classList.toggle('selected',set.has(i));node.setAttribute('aria-pressed',String(set.has(i)));updateTradeCounts();
+      }});
+      chip.classList.toggle('selected',set.has(i));chip.setAttribute('aria-pressed',String(set.has(i)));root.append(chip);
+    });
+  };
+  fill(give,state.owned,tradeGive,"Tu n'as aucune carte.");
+  fill(want,theirs,tradeWant,`${nameOf(tradeFriend)} n'a aucune carte.`);
+  updateTradeCounts();
+}
+function tradeCard(t,mode){
+  const el=h('div','trade-card');
+  el.append(h('p','trade-title',mode==='in'?`${nameOf(t.from)} te propose un échange`:`Proposé à ${nameOf(t.to)}`));
+  const cols=h('div','trade-cols2'),l=h('div'),r=h('div');
+  l.append(h('h4','',mode==='in'?'Tu reçois':'Tu donnes'),miniRow(t.give));
+  r.append(h('h4','',mode==='in'?'Tu donnes':'Tu reçois'),miniRow(t.want));
+  cols.append(l,r);el.append(cols);
+  const acts=h('div','social-actions');
+  if(mode==='in')acts.append(mkBtn('Accepter','primary',()=>acceptTrade(t.id)),mkBtn('Refuser','',()=>closeTrade(t.id,'declined')));
+  else acts.append(mkBtn("Annuler l'échange",'',()=>closeTrade(t.id,'cancelled')));
+  el.append(acts);return el;
+}
+function historyCard(t,me){
+  const el=h('div','trade-card done'),mine=t.from===me,other=mine?t.to:t.from,ok=t.status==='accepted';
+  el.append(h('p','trade-title',`${STATUS_LABEL[t.status]||t.status} · avec ${nameOf(other)}`));
+  const cols=h('div','trade-cols2'),l=h('div'),r=h('div');
+  l.append(h('h4','',ok?'Donné':'À donner'),miniRow(mine?t.give:t.want));
+  r.append(h('h4','',ok?'Reçu':'À recevoir'),miniRow(mine?t.want:t.give));
+  cols.append(l,r);el.append(cols);return el;
+}
+function renderSocial(){
+  const ids=['req-in','req-out','friend-list','trade-in','trade-out','trade-history'];
+  if(!currentUser){ids.forEach(id=>$(id).replaceChildren());$('tab-trades-count').hidden=true;return;}
+  const me=meKey(),soc=getSocial(),acc=getAccounts();
+  const myFriends=friendsOf(soc,me).filter(k=>acc[k]);
+  const reqIn=soc.requests.filter(r=>r.to===me&&acc[r.from]),reqOut=soc.requests.filter(r=>r.from===me&&acc[r.to]);
+  const tradesIn=soc.trades.filter(t=>t.status==='pending'&&t.to===me&&acc[t.from]);
+  const tradesOut=soc.trades.filter(t=>t.status==='pending'&&t.from===me&&acc[t.to]);
+  const done=soc.trades.filter(t=>t.status!=='pending'&&(t.from===me||t.to===me)&&acc[t.from===me?t.to:t.from]).sort((a,b)=>(b.doneAt||b.at||0)-(a.doneAt||a.at||0)).slice(0,8);
+  const fill=(id,items,empty,build)=>{const root=$(id);root.replaceChildren();if(!items.length)root.append(emptyNote(empty));else items.forEach(x=>root.append(build(x)));};
+  const simpleRow=(name,sub,...actions)=>{
+    const row=h('div','social-row'),info=h('span','social-info');info.append(h('span','social-name',name));if(sub)info.append(h('span','social-sub',sub));
+    const acts=h('span','social-actions');acts.append(...actions);row.append(info,acts);return row;
+  };
+  fill('req-in',reqIn,'Aucune demande reçue.',r=>simpleRow(nameOf(r.from),'',mkBtn('Accepter','primary',()=>acceptRequest(r.from)),mkBtn('Refuser','',()=>dropRequest(r.from,me))));
+  fill('req-out',reqOut,'Aucune demande en attente.',r=>simpleRow(nameOf(r.to),'En attente de réponse',mkBtn('Annuler','',()=>dropRequest(me,r.to))));
+  fill('friend-list',myFriends,"Tu n'as pas encore d'amis. Envoie une demande avec son pseudo !",k=>{
+    const n=Object.keys(readState(STORAGE_KEY+':'+k).owned).length;
+    return simpleRow(nameOf(k),`${n} / ${CARDS.length} cartes`,mkBtn('Échanger','primary',()=>{tradeFriend=k;tradeGive.clear();tradeWant.clear();say('trade-msg','');activateTab('trades',true);}),mkBtn('Retirer','',()=>removeFriend(k)));
+  });
+  fill('trade-in',tradesIn,'Aucun échange reçu.',t=>tradeCard(t,'in'));
+  fill('trade-out',tradesOut,'Aucun échange en attente.',t=>tradeCard(t,'out'));
+  fill('trade-history',done,"Pas encore d'échange terminé.",t=>historyCard(t,me));
+  const sel=$('trade-friend');
+  if(!myFriends.includes(tradeFriend)){tradeFriend=myFriends[0]||'';tradeGive.clear();tradeWant.clear();}
+  sel.replaceChildren();myFriends.forEach(k=>{const o=h('option','',nameOf(k));o.value=k;sel.append(o);});
+  sel.value=tradeFriend;sel.disabled=!myFriends.length;
+  renderPickers();
+  $('tab-friends-count').textContent=reqIn.length?'🔔 '+reqIn.length:String(myFriends.length);
+  const tb=$('tab-trades-count');tb.hidden=!tradesIn.length;tb.textContent='🔔 '+tradesIn.length;
+}
+$('friend-form').onsubmit=e=>{e.preventDefault();sendFriendRequest($('friend-input').value);};
+$('trade-friend').onchange=e=>{tradeFriend=e.target.value;tradeGive.clear();tradeWant.clear();say('trade-msg','');renderPickers();};
+$('trade-send').onclick=proposeTrade;
+// Autre onglet du même navigateur : on se resynchronise.
+window.addEventListener('storage',e=>{
+  if(e.key===null||e.key===SESSION_KEY){location.reload();return;}
+  if(!currentUser||!e.key.startsWith('kylian-tcg')||opening||$('reveal-modal').classList.contains('open'))return;
+  if(e.key===storageKey()){state=loadState();renderStats();renderCollection();}
+  renderSocial();
+});
+updateAccountUI();saveState();renderStats();renderPacks();renderCollection();renderSocial();setInterval(updateCooldown,250);if(!currentUser)showAuth('login');
 
 </script>
 </body>
