@@ -5,18 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kylian TCG</title>
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="progression.css">
+<link rel="stylesheet" href="evolution.css">
 </head>
 <body>
 <div id="site-content">
 
 <header>
   <h1>Kylian TCG</h1>
-  <p>Ouvre 2 boosters de 5 cartes par heure et complète la collection de 40 cartes</p>
+  <p id="site-intro">Deux boosters, deux collections. Ouvre 5 cartes toutes les 10 minutes dans chaque série.</p>
   <div class="stats">
     <div class="stat">Cartes uniques : <b id="stat-cards">0</b> / <span id="stat-total">40</span></div>
     <div class="stat">Boosters ouverts : <b id="stat-packs">0</b></div>
-    <div class="stat">Boosters disponibles : <b id="stat-avail">2</b> / <span id="stat-max">2</span></div>
+    <div class="stat wallet-stat">◉ <b id="stat-coins">0</b> pièces <button class="wallet-shortcut" id="wallet-quests" type="button">Gagner des pièces →</button></div>
   </div>
+  <div class="account-bar" id="account-bar" hidden><span>Connecté : <b id="account-name"></b></span><button class="btn" id="logout" type="button">Se déconnecter</button></div>
 </header>
 <div class="site-tabs" role="tablist" aria-label="Navigation du jeu">
   <button class="site-tab" type="button" id="tab-packs" role="tab" aria-selected="true" aria-controls="panel-packs" tabindex="0">
@@ -25,20 +28,35 @@
   <button class="site-tab" type="button" id="tab-collection" role="tab" aria-selected="false" aria-controls="panel-collection" tabindex="-1">
     <span>Ma collection</span><span class="tab-count" id="tab-collection-count" aria-hidden="true">0 / 40</span>
   </button>
+<button class="site-tab" type="button" id="tab-profile" role="tab" aria-selected="false" aria-controls="panel-profile" tabindex="-1"><span>Mon profil</span><span class="tab-count" id="tab-profile-count">◈</span></button>
+<button class="site-tab" type="button" id="tab-quests" role="tab" aria-selected="false" aria-controls="panel-quests" tabindex="-1"><span>Quêtes</span><span class="tab-count" id="tab-quests-count">✧</span></button>
+<button class="site-tab" type="button" id="tab-rebirth" role="tab" aria-selected="false" aria-controls="panel-rebirth" tabindex="-1"><span>Rebirth</span><span class="tab-count" id="tab-rebirth-count">♛</span></button>
+  <button class="site-tab" type="button" id="tab-friends" role="tab" aria-selected="false" aria-controls="panel-friends" tabindex="-1">
+    <span>Amis</span><span class="tab-count" id="tab-friends-count" aria-hidden="true">0</span>
+  </button>
+  <button class="site-tab" type="button" id="tab-trades" role="tab" aria-selected="false" aria-controls="panel-trades" tabindex="-1">
+    <span>Échanges</span><span class="tab-count" id="tab-trades-count" aria-hidden="true" hidden>0</span>
+  </button>
 </div>
 
 <main class="tab-panels">
+<p id="catalog-error" role="alert" hidden></p>
 <section id="panel-packs" class="tab-panel" role="tabpanel" aria-labelledby="tab-packs" tabindex="0">
-<h2 class="section">Booster</h2>
-<p class="hint">Clique sur le booster pour l'ouvrir · 2 boosters par heure</p>
+<h2 class="section">Choisis ton booster</h2>
+<p class="hint" id="pack-hint">Chaque booster contient uniquement les cartes de sa série · délais indépendants de 10 minutes</p>
 <div class="packs" id="packs"></div>
 <p class="cooldown" id="cooldown"></p>
 <p class="complete" id="complete"></p>
-<div class="actions"><button class="btn" id="reset">↺ Réinitialiser la collection</button></div>
+
 
 </section>
 <section id="panel-collection" class="tab-panel" role="tabpanel" aria-labelledby="tab-collection" tabindex="0" hidden>
-<h2 class="section">Ma collection</h2>
+<h2 class="section">Mes collections</h2>
+<div class="collection-switch" role="group" aria-label="Choisir la collection">
+  <button type="button" data-collection="original" aria-pressed="true">Collection originale <span id="count-original"></span></button>
+  <button type="button" data-collection="anime" aria-pressed="false">Duo animé <span id="count-anime"></span></button>
+</div>
+<div class="collection-summary"><h3 id="collection-title"></h3><p id="collection-progress" aria-live="polite"></p><progress id="collection-meter" value="0" max="40" aria-label="Progression de la collection"></progress></div>
 <div class="filters">
   <button class="active" data-filter="all">Toutes</button>
   <button data-filter="common">Commune</button>
@@ -47,10 +65,52 @@
   <button data-filter="legendary">Légendaire</button>
 </div>
 <div class="grid" id="grid"></div>
+<div class="actions collection-reset"><button class="btn" id="reset" type="button">↺ Réinitialiser cette collection</button></div>
 </section>
+<section id="panel-friends" class="tab-panel" role="tabpanel" aria-labelledby="tab-friends" tabindex="0" hidden>
+<h2 class="section">Amis</h2>
+<div class="social-wrap">
+  <form class="friend-form" id="friend-form" novalidate>
+    <input id="friend-input" placeholder="Pseudo de ton ami" maxlength="20" autocomplete="off" aria-label="Pseudo de ton ami">
+    <button class="btn primary" type="submit">Envoyer la demande</button>
+  </form>
+  <p class="social-msg" id="friend-msg" role="status" aria-live="polite"></p>
+  <h3 class="social-title">Demandes reçues</h3>
+  <div class="social-list" id="req-in"></div>
+  <h3 class="social-title">Demandes envoyées</h3>
+  <div class="social-list" id="req-out"></div>
+  <h3 class="social-title">Mes amis</h3>
+  <div class="social-list" id="friend-list"></div>
+</div>
+</section>
+<section id="panel-trades" class="tab-panel" role="tabpanel" aria-labelledby="tab-trades" tabindex="0" hidden>
+<h2 class="section">Échanges</h2>
+<div class="social-wrap">
+  <h3 class="social-title">Proposer un échange</h3>
+  <div class="trade-form">
+    <label class="trade-friend">Avec <select id="trade-friend"></select></label>
+    <div class="trade-cols">
+      <div><h4>Je donne <span id="give-count"></span></h4><div class="picker" id="give-picker"></div></div>
+      <div><h4>Je demande <span id="want-count"></span></h4><div class="picker" id="want-picker"></div></div>
+    </div>
+    <button class="btn primary" id="trade-send" type="button">Proposer l'échange</button>
+  </div>
+  <p class="social-msg" id="trade-msg" role="status" aria-live="polite"></p>
+  <h3 class="social-title">Échanges reçus</h3>
+  <div class="social-list" id="trade-in"></div>
+  <h3 class="social-title">Échanges envoyés</h3>
+  <div class="social-list" id="trade-out"></div>
+  <h3 class="social-title">Historique</h3>
+  <div class="social-list" id="trade-history"></div>
+</div>
+</section>
+<section id="panel-profile" class="tab-panel" role="tabpanel" aria-labelledby="tab-profile" tabindex="0" hidden><div class="progression-wrap" id="profile-root"></div></section>
+<section id="panel-quests" class="tab-panel" role="tabpanel" aria-labelledby="tab-quests" tabindex="0" hidden><div class="progression-wrap" id="quests-root"></div></section>
+<section id="panel-rebirth" class="tab-panel" role="tabpanel" aria-labelledby="tab-rebirth" tabindex="0" hidden><div class="progression-wrap" id="rebirth-root"></div></section>
 </main>
+<p class="game-notice" id="progression-notice" role="status" aria-live="polite"></p>
 
-<footer>Kylian TCG · Tous droits réservés</footer>
+<footer>Kylian TCG · Édition Évolution · Sauvegarde locale sur ce navigateur</footer>
 </div>
 <div class="modal" id="reveal-modal" role="dialog" aria-modal="true" aria-labelledby="reveal-title">
   <div class="reveal-topbar"><span class="edition-label">Kylian TCG · La collection originale</span><button class="btn sound-toggle" id="sound-toggle" aria-pressed="false">Son désactivé</button></div>
@@ -63,291 +123,28 @@
 <div class="modal" id="zoom-modal" role="dialog" aria-modal="true" aria-labelledby="zoom-title">
   <button class="close" id="zoom-close" aria-label="Fermer la carte">×</button><h3 id="zoom-title" hidden>Carte agrandie</h3><div id="modal-slot"></div><p class="zoom-caption">Échap ou × pour revenir</p>
 </div>
-<script>
-  /* =====================================================================
-     TES 40 CARTES
-     Remplis pour chaque carte :
-       name   : le nom de la carte
-       img    : le chemin de la photo, ex. "images/kylian1.jpg"
-       desc   : la description
-       type   : un petit label (optionnel), ex. "Soirée", "Vacances"
-       rarity : "common", "rare", "epic" ou "legendary"
-     Le numéro (#001, #002…) est automatique selon l'ordre de la liste.
-     ===================================================================== */
-  const CARDS = [
-    // ---- 20 communes ----
-    { name: "Kylian Lloris", img: "img/Kylian, gardien lunaire des météorites.png", desc: "", type: "", rarity: "common" },
-    { name: "Radin", img: "img/Kylian, plongeur du canapé géant.png", desc: "", type: "", rarity: "common" },
-    { name: "Archéologue", img: "img/L’archéologue du câble USB fossilisé.png", desc: "", type: "", rarity: "common" },
-    { name: "Wi-fi", img: "img/L’exorciste de la box Wi‑Fi.png", desc: "", type: "", rarity: "common" },
-    { name: "Pigeon", img: "img/L’héritier royal des pigeons.png", desc: "", type: "", rarity: "common" },
-    { name: "Météo", img: "img/Le bulletin météo du réfrigérateur.png", desc: "", type: "", rarity: "common" },
-    { name: "Cuisto", img: "img/Le chef étoilé du micro-ondes.png", desc: "", type: "", rarity: "common" },
-    { name: "Chirurgien", img: "img/Le chirurgien de la dernière chips.png", desc: "", type: "", rarity: "common" },
-    { name: "Chaussette", img: "img/Le conseil des chaussettes orphelines.png", desc: "", type: "", rarity: "common" },
-    { name: "Pizza", img: "img/Le livreur de pizza face au T-Rex.png", desc: "", type: "", rarity: "common" },
-    { name: "Prêtre", img: "img/Le miracle de l’imprimante médiévale.png", desc: "", type: "", rarity: "common" },
-    { name: "Le dompteur", img: "img/Le négociateur, le croissant et les oies.png", desc: "", type: "", rarity: "common" },
-    { name: "Le photographe", img: "img/Le photographe des mariés squelettes.png", desc: "", type: "", rarity: "common" },
-    { name: "Harry Péteur", img: "img/Le sorcier réparateur de dragons.png", desc: "", type: "", rarity: "common" },
-    { name: "Bohnome de neige", img: "img/Le thanatopracteur des bonshommes de neige.png", desc: "", type: "", rarity: "common" },
-    { name: "Il pêche quoi même", img: "img/Pêcheur de nuages au coucher du soleil.png", desc: "", type: "", rarity: "common" },
-    { name: "Momie (Raph)", img: "img/SAV des momies dans la pyramide.png", desc: "", type: "", rarity: "common" },
-    { name: "Magicien", img: "img/Téléachat, pierre maudite et mains fantomatiques.png", desc: "", type: "", rarity: "common" },
-    { name: "Kylian videur ?", img: "img/Videur de pingouins dans l’iceberg.png", desc: "", type: "", rarity: "common" },
-    { name: "La DS3 du daron", img: "img/C2wKN.jpg", desc: "", type: "", rarity: "common" },
-    // ---- 11 rares ----
-    { name: "Kyky Braqueur", img: "img/Braquage de la dernière frite.png", desc: "Bro a cru il était Tom Cruise", type: "", rarity: "rare" },
-    { name: "J.O", img: "img/Champion olympique du lancer de pantoufle.png", desc: "POV: Le seul sport ou il est bon: lancer la pantoufle pour éteindre la lumière", type: "", rarity: "rare" },
-    { name: "Moustique", img: "img/Chasse nocturne au moustique géant.png", desc: "On dirait Indiana Jones en 2090 frr", type: "", rarity: "rare" },
-    { name: "Chevalier", img: "img/Chevalier baroque en claquettes, cathédrale en ruine.png", desc: "Il s'est cru dans elden ring ou c'est comment ?", type: "", rarity: "rare" },
-    { name: "Douanier", img: "img/Douane infernale au guichet.png", desc: "Si le gars était noir ce serait bien plus problématique", type: "", rarity: "rare" },
-    { name: "Avocat", img: "img/Kylian avocat du grille-pain.png", desc: "Même avec un job stylé il fait quand même de la merde", type: "", rarity: "rare" },
-    { name: "Chef d'orchestre", img: "img/Kylian dirige l’orchestre des canards.png", desc: "coin coin.", type: "", rarity: "rare" },
-    { name: "Red Dead Nulos 2", img: "img/Kylian dompte l’aspirateur robot.png", desc: "Arthur Morgan a la retraite", type: "", rarity: "rare" },
-    { name: "Ovni", img: "img/Kylian inspecte un OVNI cabossé.png", desc: "Pov: il répare la voiture de sa soeur", type: "", rarity: "rare" },
-    { name: "Turbo", img: "img/Kylian jockey sur un escargot géant.png", desc: "Même PIXAR est choqué de l'idée", type: "", rarity: "rare" },
-    { name: "DJ", img: "img/Kylian, DJ de la maison hantée(1).png", desc: "OUAIS DJ KYKY", type: "", rarity: "rare" },
-    // ---- 6 épiques ----
-    { name: "Avec le Z", img: "img/Câlin surprise entre Kylian et Éric Zemmour.png", desc: "Quand kyky rencontre son ame soeur -->", type: "", rarity: "epic" },
-    { name: "Ninja", img: "img/Capitaine du Gotei 13 à la baguette.png", desc: "Attention kylian tu risque de te faire mal", type: "", rarity: "epic" },
-    { name: "Lidl", img: "img/Le boss final du Lidl.png", desc: "Bro à la carte Lidl pro max ++", type: "", rarity: "epic" },
-    { name: "Verstappute", img: "img/Kylian, roi du circuit en tondeuse.png", desc: "Même Hamilton est choqué du manque de charisme", type: "", rarity: "epic" },
-    { name: "Croque-mort", img: "img/Stagiaire croque-mort à la pelle dorée.png", desc: "tellment il est petit le costume est gigantesque (cest du xxs miskine)", type: "", rarity: "epic" },
-    { name: "Pause caf", img: "img/Bureau en fuite, café intact.png", desc: "C'est moi ou il a le cul en feu ?", type: "", rarity: "epic" },
-    // ---- 3 légendaires ----
-    { name: "Avec Manu", img: "img/IMG_3986.png", desc: "Quand kyky à trouvé son amoureuse:", type: "", rarity: "legendary" },
-    { name: "La familia", img: "img/IMG_3987.png", desc: "C'est donc pour ça qu'il a eu son bac le kyky", type: "", rarity: "legendary" },
-    { name: "En manif", img: "img/rfJW7.jpg", desc: "Quand kyky vole le tshirt de Mr Laur et fait manif avec, Marine et Jordan ne sont pas contents :(", type: "", rarity: "legendary" }
-  ];
-
-const CARDS_PER_PACK = 5, STORAGE_KEY = 'kylian-tcg-v1';
-const storageKey=()=>STORAGE_KEY;
-const BOOSTERS_PER_HOUR = 2;          // boosters ouvrables par heure (modifiable)
-const WINDOW_MS = 60*60*1000;         // fenêtre glissante d'une heure
-// Chances de tirer chaque rareté (puis une carte au hasard dans cette rareté). Modifiable.
-const RARITY_ORDER = ['common','rare','epic','legendary'];
-const RARITY_WEIGHTS = {common:60, rare:25, epic:11, legendary:4};
-const RARITY_LABEL = {common:'Commune',rare:'Rare',epic:'Épique',legendary:'Légendaire'};
-const COLORS = {common:'#a8a0b8',rare:'#4da3ff',epic:'#b36bff',legendary:'#f5c542'};
-const RARITY_EFFECTS = {
-  common: {symbol:'◇', stars:'◆', charge:120, turn:680, tease:'Une nouvelle facette…'},
-  rare: {symbol:'✧', stars:'✦ ✦', charge:360, turn:820, tease:'Un éclat se dessine…'},
-  epic: {symbol:'✦', stars:'✦ ✦ ✦', charge:650, turn:980, tease:'Quelque chose se réveille…'},
-  legendary: {symbol:'♛', stars:'✦ ✦ ✦ ✦', charge:1000, turn:1180, tease:'Un instant. Ça, c’est Kylian.'}
-};
-const $ = id => document.getElementById(id);
-const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-// Animate visible cards only; unseen collection cards do not use animation resources.
-const cardVisibility = typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver(entries=>{
-  entries.forEach(entry=>entry.target.classList.toggle('in-view',entry.isIntersecting));
-}, {rootMargin:'40px'});
-function newState() {return {owned:{},times:[],opened:0};}
-function readState(k) {
-  try {
-    if(!k)return newState();
-    const s=JSON.parse(localStorage.getItem(k));
-    if(s && s.owned && typeof s.owned==='object' && !Array.isArray(s.owned)) {
-      const owned={};
-      Object.entries(s.owned).forEach(([k,v])=>{const id=Number(k);if(Number.isInteger(id)&&id>=0&&id<CARDS.length&&Number.isInteger(v)&&v>0)owned[id]=v;});
-      const times=Array.isArray(s.times)?s.times.filter(Number.isFinite):(Number.isFinite(s.lastOpen)&&s.lastOpen>0?[s.lastOpen]:[]);
-      return {owned,times,opened:Number.isInteger(s.opened)&&s.opened>=0?s.opened:0};
-    }
-    // Ancien format (8 paquets fixes) : on garde les cartes déjà obtenues
-    if(s && Array.isArray(s.order) && Number.isInteger(s.opened) && s.opened>=0) {
-      const owned={};
-      s.order.slice(0,Math.min(s.opened,8)*5).forEach(id=>{if(Number.isInteger(id)&&id>=0&&id<CARDS.length)owned[id]=1;});
-      return {owned,times:[],opened:s.opened};
-    }
-  } catch {}
-  return newState();
-}
-function loadState() {
-  // Plus de comptes : si aucune partie n'est enregistrée, on reprend la plus avancée d'un ancien compte.
-  try{
-    if(!localStorage.getItem(STORAGE_KEY)){
-      let best=null,bestN=0;
-      for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(key&&key.startsWith(STORAGE_KEY+':')){const st=readState(key),n=Object.keys(st.owned).length;if(n>bestN){best=st;bestN=n;}}}
-      if(best)return best;
-    }
-  }catch{}
-  return readState(STORAGE_KEY);
-}
-let state=loadState(), currentFilter='all', opening=false, openingTimer=null, revealIds=[], revealNew=[], revealIdx=0, busy=false, flipTimer=null, spread=false;
-let returnFocus=null, zoomReturnFocus=null, audioCtx=null, soundEnabled=false;
-function saveState(){const k=storageKey();if(!k)return;try{localStorage.setItem(k,JSON.stringify(state));}catch{}}
-/* Navigation: changing tabs keeps the collection, filters and saved game intact. */
-const tabNames=['packs','collection'];
-function activateTab(name,focus=false){
-  if(!tabNames.includes(name))return;
-  tabNames.forEach(key=>{
-    const selected=key===name,tab=$('tab-'+key);
-    tab.setAttribute('aria-selected',String(selected));
-    tab.tabIndex=selected?0:-1;
-    $('panel-'+key).hidden=!selected;
-  });
-  if(focus)$('tab-'+name).focus();
-}
-function setTabsBusy(value){tabNames.forEach(name=>$('tab-'+name).disabled=value);}
-tabNames.forEach((name,index)=>{
-  const tab=$('tab-'+name);
-  tab.addEventListener('click',()=>activateTab(name));
-  tab.addEventListener('keydown',event=>{
-    let target;
-    if(event.key==='ArrowRight')target=(index+1)%tabNames.length;
-    else if(event.key==='ArrowLeft')target=(index+tabNames.length-1)%tabNames.length;
-    else if(event.key==='Home')target=0;
-    else if(event.key==='End')target=tabNames.length-1;
-    else return;
-    event.preventDefault();activateTab(tabNames[target],true);
-  });
-});
-const pad = n=>String(n).padStart(3,'0');
-function makeCard(id, interactive=false) {
-  const d=CARDS[id], el=document.createElement('article');
-  el.className='card'; el.dataset.rarity=d.rarity;
-  el.style.setProperty('--card-delay',-(id%7)*.7+'s');
-  el.innerHTML='<div class="inner"><div class="top"><h3 class="name"></h3><span class="num"></span></div><div class="art"><span class="card-sigil" aria-hidden="true"></span></div><div class="badges"><span class="rarity"></span><span class="type"></span><span class="rarity-stars" aria-hidden="true"></span></div><p class="desc"></p><span class="card-ornaments" aria-hidden="true"></span><span class="foil-sheen" aria-hidden="true"></span><span class="foil-dust" aria-hidden="true"></span></div>';
-  el.querySelector('.name').textContent=d.name;
-  el.querySelector('.num').textContent='#'+pad(id+1);
-  el.querySelector('.rarity').textContent=RARITY_LABEL[d.rarity];
-  el.querySelector('.type').textContent=d.type;
-  el.querySelector('.desc').textContent=d.desc;
-  el.querySelector('.card-sigil').textContent=RARITY_EFFECTS[d.rarity].symbol;
-  el.querySelector('.rarity-stars').textContent=RARITY_EFFECTS[d.rarity].stars;
-  const art=el.querySelector('.art');
-  if(d.img){const img=new Image();img.alt=d.name;img.loading=interactive?'lazy':'eager';img.addEventListener('error',()=>{img.remove();art.classList.add('missing');});img.src=d.img;art.append(img);}else art.classList.add('missing');
-  if(interactive){el.tabIndex=0;el.setAttribute('role','button');el.setAttribute('aria-label',`Agrandir ${d.name}, ${RARITY_LABEL[d.rarity]}`);el.onclick=()=>zoomCard(id);el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();zoomCard(id);}};}
-  bindTilt(el);
-  if(cardVisibility)cardVisibility.observe(el);else el.classList.add('in-view');
-  return el;
-}
-function makeBack(id,locked=false){const el=document.createElement('div');el.className='cardback'+(locked?' locked':'');el.innerHTML='<div class="pattern"><div class="k">K</div><div class="t"></div></div>';el.querySelector('.t').textContent=locked?'#'+pad(id+1)+' · À découvrir':'KYLIAN · TCG';return el;}
-function bindTilt(el){
-  if(reduceMotion||!matchMedia('(hover:hover)').matches)return;
-  el.onpointermove=e=>{
-    if(el.closest('.flipper:not(.flipped)'))return;
-    const r=el.getBoundingClientRect(),x=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),y=Math.max(0,Math.min(1,(e.clientY-r.top)/r.height));
-    el.style.setProperty('--rx',(0.5-y)*14+'deg');el.style.setProperty('--ry',(x-0.5)*18+'deg');
-    el.style.setProperty('--mx',x*100+'%');el.style.setProperty('--my',y*100+'%');
-  };
-  el.onpointerleave=()=>{el.style.setProperty('--rx','0deg');el.style.setProperty('--ry','0deg');el.style.setProperty('--mx','50%');el.style.setProperty('--my','50%');};
-}
-function releaseCards(root){root.querySelectorAll('.card').forEach(card=>cardVisibility?.unobserve(card));}
-function ownedCount(){return Object.keys(state.owned).length;}
-function isComplete(){return ownedCount()>=CARDS.length;}
-function recentOpenings(){const now=Date.now();return state.times.filter(t=>t>now-WINDOW_MS&&t<=now+1000);}
-function boostersAvailable(){return Math.max(0,BOOSTERS_PER_HOUR-recentOpenings().length);}
-function nextRecharge(){const r=recentOpenings();return r.length?Math.max(0,Math.min(...r)+WINDOW_MS-Date.now()):0;}
-function cooldownLeft(){return boostersAvailable()>0?0:nextRecharge();}
-function fmtTime(ms){const t=Math.ceil(ms/1000);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');}
-function drawCard(){
-  const total=RARITY_ORDER.reduce((a,r)=>a+RARITY_WEIGHTS[r],0);
-  let roll=Math.random()*total,rarity=RARITY_ORDER[0];
-  for(const r of RARITY_ORDER){if(roll<RARITY_WEIGHTS[r]){rarity=r;break;}roll-=RARITY_WEIGHTS[r];}
-  const pool=CARDS.map((_,i)=>i).filter(i=>CARDS[i].rarity===rarity);
-  return pool[Math.floor(Math.random()*pool.length)];
-}
-// Tirage totalement aléatoire (doublons possibles), trié de la moins rare à la plus rare.
-function drawPack(){
-  return Array.from({length:CARDS_PER_PACK},()=>drawCard()).sort((a,b)=>RARITY_ORDER.indexOf(CARDS[a].rarity)-RARITY_ORDER.indexOf(CARDS[b].rarity));
-}
-function updateCooldown(){
-  const done=isComplete(),avail=boostersAvailable(),left=cooldownLeft(),ready=!done&&avail>0,p=$('pack-main');
-  if(p&&!p.classList.contains('tearing')){
-    p.disabled=!ready||opening;p.classList.toggle('waiting',!ready);
-    p.setAttribute('aria-label',done?'Collection complète':ready?'Ouvrir le booster, cinq cartes':`Prochain booster disponible dans ${fmtTime(left)}`);
-    p.querySelector('.count').textContent=done?'Complet':ready?'5 cartes':fmtTime(left);
-    p.querySelector('.emblem').textContent=done?'✓':ready?'✦':'⏳';
-  }
-  $('stat-max').textContent=BOOSTERS_PER_HOUR;$('stat-avail').textContent=done?0:avail;
-  const more=avail<BOOSTERS_PER_HOUR?nextRecharge():0;
-  $('cooldown').textContent=done?'':ready?(avail===1?'Ton booster est prêt !':`${avail} boosters sont prêts !`)+(more>0?` · un de plus dans ${fmtTime(more)}`:''):`Prochain booster dans ${fmtTime(left)}`;
-  $('tab-packs-count').textContent=done?'✓':ready?'Prêt':fmtTime(left);
-}
-function renderStats(){$('stat-cards').textContent=ownedCount();$('stat-total').textContent=CARDS.length;$('stat-packs').textContent=state.opened;$('tab-collection-count').textContent=`${ownedCount()} / ${CARDS.length}`;$('complete').textContent=isComplete()?'✦ Les 40 facettes de Kylian sont réunies. Collection complète !':'';updateCooldown();}
-function renderPacks(){const root=$('packs');root.replaceChildren();const p=document.createElement('button');p.type='button';p.className='pack';p.id='pack-main';p.innerHTML='<div class="shine"></div><div class="logo">KYLIAN<br>TCG</div><div class="emblem">✦</div><div class="count">5 cartes</div>';p.onclick=()=>openPack(p);root.append(p);updateCooldown();}
-function renderCollection(){releaseCards($('grid'));$('grid').replaceChildren();CARDS.forEach((d,i)=>{const n=state.owned[i]||0;const el=n>0?makeCard(i,true):makeBack(i,true);if(n>0){const b=document.createElement('span');b.className='dupe-count';b.textContent='×'+n;b.title=n+(n>1?' exemplaires':' exemplaire');b.setAttribute('aria-hidden','true');el.append(b);}el.dataset.owned=n>0?'1':'0';el.dataset.rarityKey=d.rarity;$('grid').append(el);});applyFilter();}
-function applyFilter(){$('grid').querySelectorAll('[data-owned]').forEach(el=>el.hidden=currentFilter!=='all'&&!(el.dataset.owned==='1'&&el.dataset.rarityKey===currentFilter));}
-document.querySelectorAll('.filters button').forEach(btn=>{btn.setAttribute('aria-pressed',btn.classList.contains('active'));btn.onclick=()=>{document.querySelectorAll('.filters button').forEach(b=>{b.classList.toggle('active',b===btn);b.setAttribute('aria-pressed',b===btn);});currentFilter=btn.dataset.filter;applyFilter();};});
-function syncModal(){const zoom=$('zoom-modal').classList.contains('open'),reveal=$('reveal-modal').classList.contains('open');$('site-content').inert=zoom||reveal;$('reveal-modal').inert=zoom;document.body.classList.toggle('modal-active',zoom||reveal);}
-function openPack(el){
-  if(opening||isComplete()||boostersAvailable()===0||$('reveal-modal').classList.contains('open'))return;
-  opening=true;returnFocus=el;setTabsBusy(true);
-  revealIds=drawPack();
-  revealNew=revealIds.map(id=>{const isNew=!state.owned[id];state.owned[id]=(state.owned[id]||0)+1;return isNew;});
-  state.opened++;state.times=recentOpenings().concat(Date.now());saveState();
-  document.querySelectorAll('.pack').forEach(p=>p.disabled=true);
-  el.classList.add('tearing');
-  openingTimer=setTimeout(()=>{openingTimer=null;showReveal();renderStats();renderPacks();renderCollection();},reduceMotion?0:600);
-}
-function showReveal(){
-  revealIdx=0;spread=false;busy=false;clearRevealEffects();const row=$('reveal-row');releaseCards(row);row.replaceChildren();row.className='reveal-row stacked';
-  $('reveal-title').textContent='Un Kylian peut en cacher un autre.';
-  revealIds.forEach((id,i)=>{const f=document.createElement('button');f.type='button';f.className='flipper';f.dataset.rarity=CARDS[id].rarity;f.setAttribute('aria-label',`Retourner la carte ${i+1}`);f.innerHTML='<div class="flipper-inner"><div class="face back" aria-hidden="true"></div><div class="face front" aria-hidden="true"></div></div>';f.querySelector('.back').append(makeBack(id));f.querySelector('.front').append(makeCard(id));f.onclick=()=>{if(spread)zoomCard(id);else if(i===revealIdx)advance();};row.append(f);});
-  $('reveal-modal').classList.add('open');layoutStack();updateRevealUI();syncModal();$('reveal-next').focus();
-}
-function layoutStack(){Array.from($('reveal-row').children).forEach((f,i)=>{const depth=i-revealIdx;f.classList.toggle('top',depth===0);f.classList.toggle('gone',depth<0);f.style.zIndex=depth<0?0:5-depth;f.style.transform=depth<0?'':`translate(${depth*5}px,${depth*4}px) rotate(${depth%2?2:-2}deg)`;f.disabled=depth!==0;f.tabIndex=depth===0?0:-1;});}
-function updateRevealUI(){
-  const top=$('reveal-row').children[revealIdx], flipped=top?.classList.contains('flipped');
-  $('reveal-count').textContent=spread?'5 cartes ajoutées à ta collection':`BOOSTER N° ${state.opened} · CARTE ${revealIdx+1} / 5`;
-  $('reveal-next').hidden=spread;$('reveal-all').hidden=spread;$('reveal-zoom').hidden=spread||!flipped;
-  $('reveal-next').disabled=busy;$('reveal-all').disabled=busy;$('reveal-zoom').disabled=busy;
-  $('reveal-next').textContent=!flipped?'Révéler la carte':revealIdx<4?'Carte suivante →':'Voir mon paquet';
-  $('reveal-close').textContent=spread?'Voir ma collection':'Garder ce paquet et fermer';
-  $('reveal-help').textContent=spread?'Sélectionne une carte pour la regarder de plus près.':'Clique sur la carte ou utilise le bouton pour continuer.';
-  const rarity=!spread&&flipped?CARDS[revealIds[revealIdx]].rarity:'hidden';
-  $('reveal-modal').dataset.rarity=rarity;
-  $('reveal-modal').style.setProperty('--stage-color',COLORS[rarity]||'#a88bc4');
-  $('rarity-announcement').textContent=spread?'Le casting est au complet.':flipped?RARITY_LABEL[CARDS[revealIds[revealIdx]].rarity]+(revealNew[revealIdx]?' · Nouvelle !':' · Doublon'):'À toi de jouer.';
-  $('reveal-dots').innerHTML=revealIds.map((_,i)=>`<span class="${spread||$('reveal-row').children[i].classList.contains('flipped')?'seen ':''}${!spread&&i===revealIdx?'current':''}"></span>`).join('');
-}
-function flip(f){f.classList.add('flipped','pop-'+f.dataset.rarity);f.querySelector('.front').setAttribute('aria-hidden','false');f.setAttribute('aria-label',`${CARDS[revealIds[Array.from(f.parentNode.children).indexOf(f)]] .name}, ${RARITY_LABEL[f.dataset.rarity]}. Continuer.`);}
-function clearRevealEffects(){
-  $('reveal-modal').dataset.phase='idle';
-  $('particles').classList.remove('burst');
-  $('rarity-announcement').classList.remove('shown');
-  $('reveal-row').querySelectorAll('.charging,.unveiling').forEach(f=>f.classList.remove('charging','unveiling'));
-}
-function advance(){
-  if(busy||spread)return;const top=$('reveal-row').children[revealIdx];
-  if(!top.classList.contains('flipped')){
-    busy=true;updateRevealUI();
-    const rarity=top.dataset.rarity,effect=RARITY_EFFECTS[rarity],modal=$('reveal-modal');
-    const unveil=()=>{
-      top.classList.remove('charging');top.classList.add('unveiling');flip(top);playReveal(rarity);updateRevealUI();modal.dataset.phase='revealed';
-      $('rarity-announcement').classList.remove('shown');void $('rarity-announcement').offsetWidth;$('rarity-announcement').classList.add('shown');
-      const particles=$('particles');particles.classList.remove('burst');if(!reduceMotion&&rarity!=='common'){void particles.offsetWidth;particles.classList.add('burst');}
-      if(reduceMotion){busy=false;flipTimer=null;updateRevealUI();}
-      else flipTimer=setTimeout(()=>{busy=false;flipTimer=null;top.classList.remove('unveiling');updateRevealUI();},effect.turn+160);
-    };
-    if(reduceMotion){unveil();return;}
-    modal.dataset.rarity=rarity;modal.dataset.phase='charging';modal.style.setProperty('--stage-color',COLORS[rarity]);
-    top.classList.add('charging');$('reveal-next').textContent='Révélation…';$('rarity-announcement').textContent=effect.tease;
-    flipTimer=setTimeout(unveil,effect.charge);
-  }else if(revealIdx<4){revealIdx++;clearRevealEffects();layoutStack();updateRevealUI();}else spreadCards();
-}
-function spreadCards(){if(busy)return;clearRevealEffects();spread=true;$('reveal-row').classList.remove('stacked');$('reveal-title').textContent='Ton nouveau casting.';Array.from($('reveal-row').children).forEach(f=>{f.classList.remove('top','gone');f.style.transform='';f.style.zIndex='';f.disabled=false;f.tabIndex=0;flip(f);f.setAttribute('aria-label',f.getAttribute('aria-label').replace('Continuer.','Agrandir la carte.'));});updateRevealUI();$('reveal-close').focus();}
-function closeReveal({showCollection=false}={}){clearTimeout(flipTimer);flipTimer=null;busy=false;opening=false;setTabsBusy(false);clearRevealEffects();$('reveal-modal').classList.remove('open');releaseCards($('reveal-row'));$('reveal-row').replaceChildren();renderPacks();syncModal();if(showCollection){activateTab('collection',true);}else{const next=$('packs').querySelector('button:not(:disabled)');(next||$('reset')).focus();}}
-$('reveal-next').onclick=advance;$('reveal-all').onclick=spreadCards;$('reveal-close').onclick=()=>closeReveal({showCollection:spread});$('reveal-zoom').onclick=()=>zoomCard(revealIds[revealIdx]);
-function zoomCard(id){zoomReturnFocus=document.activeElement;releaseCards($('modal-slot'));$('modal-slot').replaceChildren(makeCard(id));$('zoom-modal').dataset.rarity=CARDS[id].rarity;$('zoom-modal').style.setProperty('--stage-color',COLORS[CARDS[id].rarity]);$('zoom-modal').classList.add('open');$('zoom-title').textContent=CARDS[id].name;syncModal();$('zoom-close').focus();}
-function closeZoom(){$('zoom-modal').classList.remove('open');releaseCards($('modal-slot'));$('modal-slot').replaceChildren();syncModal();if(zoomReturnFocus?.isConnected)zoomReturnFocus.focus();}
-$('zoom-close').onclick=closeZoom;$('zoom-modal').onclick=e=>{if(e.target===$('zoom-modal'))closeZoom();};
-document.addEventListener('keydown',e=>{const modal=$('zoom-modal').classList.contains('open')?$('zoom-modal'):$('reveal-modal').classList.contains('open')?$('reveal-modal'):null;if(!modal)return;
-  if(e.key==='Escape'){e.preventDefault();modal.id==='zoom-modal'?closeZoom():closeReveal();}
-  if(e.key==='Tab'){const els=Array.from(modal.querySelectorAll('button:not(:disabled),[tabindex="0"]')).filter(el=>!el.hidden&&el.getClientRects().length);const first=els[0],last=els.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}
-});
-$('reset').onclick=()=>{if(opening)return;if(!confirm('Tout réinitialiser ? Ta collection sera effacée.'))return;state={...newState(),times:state.times};saveState();renderStats();renderPacks();renderCollection();};
-$('sound-toggle').onclick=()=>{soundEnabled=!soundEnabled;try{if(soundEnabled){audioCtx??=new(window.AudioContext||window.webkitAudioContext)();audioCtx.resume().catch(()=>{});}}catch{soundEnabled=false;}$('sound-toggle').textContent=soundEnabled?'Son activé':'Son désactivé';$('sound-toggle').setAttribute('aria-pressed',soundEnabled);};
-function playReveal(rarity){if(!soundEnabled||!audioCtx)return;const notes={common:[261.63],rare:[329.63,493.88],epic:[392,493.88,587.33],legendary:[392,493.88,587.33,783.99]}[rarity];notes.forEach((hz,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain(),t=audioCtx.currentTime+i*.12;o.type='sine';o.frequency.value=hz;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.045,t+.025);g.gain.exponentialRampToValueAtTime(.0001,t+.75);o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+.8);});}
-for(let i=0;i<24;i++){const p=document.createElement('i'),angle=i*Math.PI/12;p.style.setProperty('--dx',Math.cos(angle)*(130+i%4*35)+'px');p.style.setProperty('--dy',Math.sin(angle)*(130+i%4*35)+'px');p.style.animationDelay=(i%3)*.05+'s';$('particles').append(p);}
-// Autre onglet du même navigateur : on se resynchronise.
-window.addEventListener('storage',e=>{
-  if(e.key!==STORAGE_KEY||opening||$('reveal-modal').classList.contains('open'))return;
-  state=loadState();renderStats();renderCollection();
-});
-saveState();renderStats();renderPacks();renderCollection();setInterval(updateCooldown,250);
-
-</script>
+<div class="modal" id="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+  <div class="auth-box">
+    <h3 id="auth-title">Kylian TCG</h3>
+    <div class="auth-tabs">
+      <button type="button" class="active" id="auth-tab-login">Connexion</button>
+      <button type="button" id="auth-tab-register">Créer un compte</button>
+    </div>
+    <form id="auth-form" novalidate>
+      <label>Pseudo<input id="auth-user" name="username" autocomplete="username" maxlength="20" required></label>
+      <label>Mot de passe<input id="auth-pass" name="password" type="password" autocomplete="current-password" required></label>
+      <label id="auth-pass2-wrap" hidden>Confirmer le mot de passe<input id="auth-pass2" type="password" autocomplete="new-password"></label>
+      <p class="auth-error" id="auth-error" role="alert"></p>
+      <button class="btn primary" id="auth-submit" type="submit">Se connecter</button>
+    </form>
+    <p class="auth-note">Les comptes sont enregistrés sur cet appareil, dans ce navigateur.</p>
+  </div>
+</div>
+<script src="reglages.js"></script>
+<script src="cartes.js"></script>
+<script src="progression-reglages.js"></script>
+<script src="economie.js"></script>
+<script src="jeu.js"></script>
+<script src="progression.js"></script>
 </body>
 </html>
